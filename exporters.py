@@ -13,10 +13,38 @@ from nbconvert import MarkdownExporter, HTMLExporter
 from nbconvert.preprocessors import (ClearMetadataPreprocessor,
                                      ClearOutputPreprocessor,
                                      ExecutePreprocessor,
-                                     ExtractOutputPreprocessor)
+                                     ExtractOutputPreprocessor,
+                                     Preprocessor)
 from traitlets.config import Config
 
 notebook_render_dir = "_notebook_resources"
+
+
+class RemoveOnContent(Preprocessor):
+    """
+    remove on some content flags
+    """
+
+    def preprocess(self, nb, resources):
+
+        # Filter out cells that meet the conditions
+        nb.cells = [self.preprocess_cell(cell, resources, index)[0]
+                    for index, cell in enumerate(nb.cells)]
+
+        return nb, resources
+
+    def preprocess_cell(self, cell, resources, cell_index):
+        """
+        Apply a transformation on each cell. See base.py for details.
+        """
+        
+        if cell["source"]:
+            if "#HIDE" == cell["source"][:5]:
+                cell.transient = {
+                    'remove_source': True
+                }
+
+        return cell, resources
 
 
 class CustomExtractOutputPreprocessor(ExtractOutputPreprocessor):
@@ -45,6 +73,13 @@ def indent(instr, nspaces=4, ntabs=0, flatten=False):
     return normal_indent(instr, nspaces, ntabs, flatten)
 
 
+def check_string_in_source(instr, item):
+    for x in item["source"]:
+        if instr in x:
+            return True
+    return False
+
+
 class MarkdownRenderer(object):
     self_reference = "render_to_markdown"
     exporter_class = MarkdownExporter
@@ -59,10 +94,13 @@ class MarkdownRenderer(object):
     def check_for_self_reference(self, x):
         # scope out the cell that called this function
         # prevent circular call
-        for x in x["source"]:
-            if "{0}".format(self.__class__.self_reference) in x:
-                return True
-        return False
+        return check_string_in_source(self.__class__.self_reference, x)
+
+    def add_tags(self, nb):
+        for cell in nb["cells"]:
+            if cell["source"] and "#HIDE" in cell["source"][0]:
+                cell["metadata"]["tags"] = cell["metadata"].get("tags", []) + ["hide_input"]
+        return nb
 
     def get_contents(self, input_file):
         with open(input_file) as f:
@@ -71,6 +109,10 @@ class MarkdownRenderer(object):
         nb["cells"] = [x for x in nb["cells"]
                        if x["source"] and
                        self.check_for_self_reference(x) is False]
+
+        # add tags based on content
+        #nb = self.add_tags(nb)
+
         str_notebook = json.dumps(nb)
         nb = nbformat.reads(str_notebook, as_version=4)
         return nb
@@ -81,7 +123,8 @@ class MarkdownRenderer(object):
             ClearMetadataPreprocessor,
             ClearOutputPreprocessor,
             ExecutePreprocessor,
-            CustomExtractOutputPreprocessor
+            CustomExtractOutputPreprocessor,
+            RemoveOnContent
         ]
         c.MarkdownExporter.filters = {"indent": indent}
         c.MarkdownExporter.exclude_input = not self.include_input
@@ -137,7 +180,8 @@ class HTML_Renderer(MarkdownRenderer):
             ClearMetadataPreprocessor,
             ClearOutputPreprocessor,
             ExecutePreprocessor,
-            CustomExtractOutputPreprocessor
+            CustomExtractOutputPreprocessor,
+            RemoveOnContent
         ]
         c.MarkdownExporter.exclude_input = not self.include_input
         return c
