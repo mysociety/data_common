@@ -1,0 +1,16 @@
+numpy
+openpyxl
+pandas
+pyyaml
+scikit-learn
+sklearn
+unicodecsv
+xlrd
+xlwt
+tabulate
+altair
+altair_saver
+jupyter
+pylint
+pycodestyle
+autopep8
