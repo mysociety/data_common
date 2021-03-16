@@ -49,6 +49,12 @@ class MarkdownRenderer(object):
     self_reference = "render_to_markdown"
     exporter_class = MarkdownExporter
     default_ext = ".md"
+    include_input = False
+
+    def __init__(self, include_input=None):
+        if include_input is None:
+            include_input = self.__class__.include_input
+        self.include_input = include_input
 
     def check_for_self_reference(self, x):
         # scope out the cell that called this function
@@ -78,7 +84,7 @@ class MarkdownRenderer(object):
             CustomExtractOutputPreprocessor
         ]
         c.MarkdownExporter.filters = {"indent": indent}
-        c.MarkdownExporter.exclude_input = True
+        c.MarkdownExporter.exclude_input = not self.include_input
         return c
 
     def process(self, input_file="readme.ipynb", output_file=None):
@@ -123,6 +129,7 @@ class HTML_Renderer(MarkdownRenderer):
     self_reference = "render_to_html"
     exporter_class = HTMLExporter
     default_ext = ".html"
+    include_input = True
 
     def get_config(self):
         c = Config()
@@ -132,9 +139,13 @@ class HTML_Renderer(MarkdownRenderer):
             ExecutePreprocessor,
             CustomExtractOutputPreprocessor
         ]
-        c.HTMLExporter.exclude_input = False
+        c.MarkdownExporter.exclude_input = not self.include_input
         return c
 
 
-render_to_markdown = MarkdownRenderer().process
-render_to_html = HTML_Renderer().process
+def render_to_markdown(*args, **kwargs):
+    return MarkdownRenderer(*args, **kwargs).process()
+
+
+def render_to_html(*args, **kwargs):
+    return HTML_Renderer(*args, **kwargs).process()
