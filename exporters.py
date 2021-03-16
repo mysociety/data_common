@@ -37,7 +37,7 @@ class RemoveOnContent(Preprocessor):
         """
         Apply a transformation on each cell. See base.py for details.
         """
-        
+
         if cell["source"]:
             if "#HIDE" == cell["source"][:5]:
                 cell.transient = {
@@ -57,7 +57,6 @@ class CustomExtractOutputPreprocessor(ExtractOutputPreprocessor):
     def preprocess_cell(self, cell, resources, cell_index):
         if not hasattr(self, "first_use"):
             resources["outputs"] = {}
-            resources["output_files_dir"] = notebook_render_dir
             self.first_use = True
         return super().preprocess_cell(cell, resources, cell_index)
 
@@ -91,16 +90,13 @@ class MarkdownRenderer(object):
             include_input = self.__class__.include_input
         self.include_input = include_input
 
-    def check_for_self_reference(self, x):
+    def check_for_self_reference(self, cell):
         # scope out the cell that called this function
         # prevent circular call
-        return check_string_in_source(self.__class__.self_reference, x)
-
-    def add_tags(self, nb):
-        for cell in nb["cells"]:
-            if cell["source"] and "#HIDE" in cell["source"][0]:
-                cell["metadata"]["tags"] = cell["metadata"].get("tags", []) + ["hide_input"]
-        return nb
+        contains_str = check_string_in_source(
+            self.__class__.self_reference, cell)
+        is_code = cell["cell_type"] == "code"
+        return contains_str and is_code
 
     def get_contents(self, input_file):
         with open(input_file) as f:
@@ -109,9 +105,6 @@ class MarkdownRenderer(object):
         nb["cells"] = [x for x in nb["cells"]
                        if x["source"] and
                        self.check_for_self_reference(x) is False]
-
-        # add tags based on content
-        #nb = self.add_tags(nb)
 
         str_notebook = json.dumps(nb)
         nb = nbformat.reads(str_notebook, as_version=4)
@@ -141,6 +134,9 @@ class MarkdownRenderer(object):
         if os.path.exists(notebook_render_dir) is False:
             os.makedirs(notebook_render_dir)
 
+        base = os.path.basename(input_file)
+        base_root = os.path.splitext(base)[0]
+
         if output_file is None:
             output_file = os.path.splitext(
                 input_file)[0] + self.__class__.default_ext
@@ -149,9 +145,12 @@ class MarkdownRenderer(object):
 
         c = self.get_config()
 
-        markdown = self.__class__.exporter_class(config=c)
+        exporter = self.__class__.exporter_class(config=c)
 
-        body, resources = markdown.from_notebook_node(nb)
+        resources = {"output_files_dir": notebook_render_dir,
+                     "unique_key": base_root}
+
+        body, resources = exporter.from_notebook_node(nb, resources)
 
         # write images
         if "outputs" in resources:
@@ -160,7 +159,7 @@ class MarkdownRenderer(object):
                 with open(filename, "wb") as f:
                     f.write(contents)
 
-        # write markdown
+        # write main file
         with open(output_file, "w") as f:
             f.write(body)
 
