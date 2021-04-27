@@ -20,6 +20,8 @@ from traitlets.config import Config
 notebook_render_dir = "_notebook_resources"
 
 
+
+
 class RemoveOnContent(Preprocessor):
     """
     remove on some content flags
@@ -85,9 +87,10 @@ class MarkdownRenderer(object):
     default_ext = ".md"
     include_input = False
 
-    def __init__(self, include_input=None):
+    def __init__(self, input_name="readme.ipynb", include_input=None):
         if include_input is None:
             include_input = self.__class__.include_input
+        self.input_name = input_name
         self.include_input = include_input
 
     def check_for_self_reference(self, cell):
@@ -123,13 +126,16 @@ class MarkdownRenderer(object):
         c.MarkdownExporter.exclude_input = not self.include_input
         return c
 
-    def process(self, input_file="readme.ipynb", output_file=None):
+    def process(self, input_file=None, output_file=None):
 
         # render clear markdown version of book
         # equiv of `jupyter nbconvert
         # --ClearMetadataPreprocessor.enabled=True
         # --ClearOutput.enabled=True
         # --no-input --execute readme.ipynb --to markdown`
+
+        if input_file is None:
+            input_file = self.input_name
 
         if os.path.exists(notebook_render_dir) is False:
             os.makedirs(notebook_render_dir)
