@@ -5,6 +5,7 @@ Mirrors ggplot theme
 """
 
 import altair as alt
+from typing import List, Any, Optional
 
 # brand colours
 colours = {'colour_orange': '#f79421',
@@ -70,6 +71,23 @@ original_palette = [
 
 # use new palette for as long as possible
 mysoc_palette_colors = palette_colors + original_palette[len(palette_colors):]
+
+
+def color_scale(domain: List[Any],
+                monochrome: bool = False,
+                reverse: bool = False,
+                palette: Optional[List[Any]] = None
+                ) -> alt.Scale:
+    if palette is None:
+        if monochrome:
+            palette = monochrome_palette_colors
+        else:
+            palette = mysoc_palette_colors
+    use_palette = palette[:len(domain)]
+    if reverse:
+        use_palette = use_palette[::-1]
+    return alt.Scale(domain=domain, range=use_palette)
+
 
 font = "Source Sans Pro"
 
