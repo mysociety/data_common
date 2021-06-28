@@ -6,6 +6,8 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
+from htmltabletomd import convert_table
+from bs4 import BeautifulSoup
 
 import nbformat
 from ipython_genutils.text import indent as normal_indent
@@ -18,8 +20,6 @@ from nbconvert.preprocessors import (ClearMetadataPreprocessor,
 from traitlets.config import Config
 
 notebook_render_dir = "_notebook_resources"
-
-
 
 
 class RemoveOnContent(Preprocessor):
@@ -85,13 +85,23 @@ class MarkdownRenderer(object):
     self_reference = "render_to_markdown"
     exporter_class = MarkdownExporter
     default_ext = ".md"
+    clear_and_execute = True
     include_input = False
+    markdown_tables = True
 
-    def __init__(self, input_name="readme.ipynb", include_input=None):
+    def __init__(self,
+                 input_name="readme.ipynb",
+                 output_name=None,
+                 include_input=None,
+                 clear_and_execute=None):
         if include_input is None:
             include_input = self.__class__.include_input
+        if clear_and_execute is None:
+            clear_and_execute = self.__class__.clear_and_execute
         self.input_name = input_name
+        self.output_name = output_name
         self.include_input = include_input
+        self.clear_and_execute = clear_and_execute
 
     def check_for_self_reference(self, cell):
         # scope out the cell that called this function
@@ -115,13 +125,19 @@ class MarkdownRenderer(object):
 
     def get_config(self):
         c = Config()
-        c.MarkdownExporter.preprocessors = [
-            ClearMetadataPreprocessor,
-            ClearOutputPreprocessor,
-            ExecutePreprocessor,
-            CustomExtractOutputPreprocessor,
-            RemoveOnContent
-        ]
+
+        pre_processors = []
+
+        if self.clear_and_execute:
+            pre_processors += [ClearMetadataPreprocessor,
+                               ClearOutputPreprocessor,
+                               ExecutePreprocessor]
+
+        pre_processors += [CustomExtractOutputPreprocessor,
+                           RemoveOnContent
+                           ]
+
+        c.MarkdownExporter.preprocessors = pre_processors
         c.MarkdownExporter.filters = {"indent": indent}
         c.MarkdownExporter.exclude_input = not self.include_input
         return c
@@ -137,8 +153,13 @@ class MarkdownRenderer(object):
         if input_file is None:
             input_file = self.input_name
 
-        if os.path.exists(notebook_render_dir) is False:
-            os.makedirs(notebook_render_dir)
+        if output_file is None:
+            output_file = self.output_name
+
+        output_base_path = Path(output_file).parent
+
+        if os.path.exists(output_base_path / notebook_render_dir) is False:
+            os.makedirs(output_base_path / notebook_render_dir)
 
         base = os.path.basename(input_file)
         base_root = os.path.splitext(base)[0]
@@ -161,9 +182,25 @@ class MarkdownRenderer(object):
         # write images
         if "outputs" in resources:
             for filename, contents in resources["outputs"].items():
-                print("writing: {0}".format(filename))
-                with open(filename, "wb") as f:
+                write_location = output_base_path / filename
+                print("writing: {0}".format(write_location))
+                with open(write_location, "wb") as f:
                     f.write(contents)
+
+
+        if self.__class__.markdown_tables:
+
+            body = body.replace('<tr style="text-align: right;">\n      <th></th>',"<tr>")
+            soup = BeautifulSoup(body, 'html.parser')
+
+            for div in soup.find_all("div"):
+                table = convert_table(str(div))
+                div.replaceWith(table)
+
+            body = str(soup)
+
+            body = body.replace("![png]", "![]")
+
 
         # write main file
         with open(output_file, "w") as f:
@@ -178,17 +215,29 @@ class HTML_Renderer(MarkdownRenderer):
     exporter_class = HTMLExporter
     default_ext = ".html"
     include_input = True
+    markdown_tables = False
 
     def get_config(self):
         c = Config()
-        c.HTMLExporter.preprocessors = [
-            ClearMetadataPreprocessor,
-            ClearOutputPreprocessor,
-            ExecutePreprocessor,
-            CustomExtractOutputPreprocessor,
-            RemoveOnContent
-        ]
-        c.MarkdownExporter.exclude_input = not self.include_input
+
+        pre_processors = []
+
+        if self.clear_and_execute:
+            pre_processors += [ClearMetadataPreprocessor,
+                               ClearOutputPreprocessor,
+                               ExecutePreprocessor]
+
+        pre_processors += [CustomExtractOutputPreprocessor,
+                           RemoveOnContent
+                           ]
+
+        c.HTMLExporter.preprocessors = pre_processors
+
+        if self.include_input == False:
+            c.HTMLExporter.exclude_input = not self.include_input
+            c.HTMLExporter.exclude_input_prompt = not self.include_input
+            c.HTMLExporter.exclude_output_prompt = not self.include_input
+            
         return c
 
 
