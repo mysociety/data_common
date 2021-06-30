@@ -14,3 +14,6 @@ jupyter
 pylint
 pycodestyle
 autopep8
+ruamel.yaml
+pypandoc
+flake8
