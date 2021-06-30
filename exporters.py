@@ -156,17 +156,17 @@ class MarkdownRenderer(object):
         if output_file is None:
             output_file = self.output_name
 
+        if output_file is None:
+            output_file = Path(os.path.splitext(
+                input_file)[0] + self.__class__.default_ext)
+
         output_base_path = Path(output_file).parent
 
-        if os.path.exists(output_base_path / notebook_render_dir) is False:
+        if (output_base_path / notebook_render_dir).exists() is False:
             os.makedirs(output_base_path / notebook_render_dir)
 
         base = os.path.basename(input_file)
         base_root = os.path.splitext(base)[0]
-
-        if output_file is None:
-            output_file = os.path.splitext(
-                input_file)[0] + self.__class__.default_ext
 
         nb = self.get_contents(input_file)
 
@@ -187,10 +187,10 @@ class MarkdownRenderer(object):
                 with open(write_location, "wb") as f:
                     f.write(contents)
 
-
         if self.__class__.markdown_tables:
 
-            body = body.replace('<tr style="text-align: right;">\n      <th></th>',"<tr>")
+            body = body.replace(
+                '<tr style="text-align: right;">\n      <th></th>', "<tr>")
             soup = BeautifulSoup(body, 'html.parser')
 
             for div in soup.find_all("div"):
@@ -200,7 +200,6 @@ class MarkdownRenderer(object):
             body = str(soup)
 
             body = body.replace("![png]", "![]")
-
 
         # write main file
         with open(output_file, "w") as f:
@@ -237,7 +236,7 @@ class HTML_Renderer(MarkdownRenderer):
             c.HTMLExporter.exclude_input = not self.include_input
             c.HTMLExporter.exclude_input_prompt = not self.include_input
             c.HTMLExporter.exclude_output_prompt = not self.include_input
-            
+
         return c
 
 
