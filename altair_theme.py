@@ -47,6 +47,13 @@ palette = ["colour_dark_blue",
            "colour_purple",
            "colour_yellow"]
 
+contrast_palette = ["colour_dark_blue",
+                    "colour_yellow",
+                    "colour_berry",
+                    "colour_orange",
+                    "colour_blue",
+                    "colour_purple"]
+
 monochrome_palette = ["colour_blue_light_20",
                       "colour_blue",
                       "colour_blue_dark_20",
@@ -56,6 +63,8 @@ monochrome_palette = ["colour_blue_light_20",
                       ]
 
 palette_colors = [adjusted_colours[x] for x in palette]
+
+contrast_palette_colors = [adjusted_colours[x] for x in contrast_palette]
 
 monochrome_palette_colors = [monochrome_colours[x] for x in monochrome_palette]
 
@@ -76,13 +85,19 @@ mysoc_palette_colors = palette_colors + original_palette[len(palette_colors):]
 def color_scale(domain: List[Any],
                 monochrome: bool = False,
                 reverse: bool = False,
-                palette: Optional[List[Any]] = None
+                palette: Optional[List[Any]] = None,
+                named_palette: Optional[List[Any]] = None
                 ) -> alt.Scale:
     if palette is None:
         if monochrome:
             palette = monochrome_palette_colors
         else:
             palette = mysoc_palette_colors
+    if named_palette is not None:
+        if monochrome:
+            palette = [monochrome_colours[x] for x in named_palette]
+        else:
+            palette = [adjusted_colours[x] for x in named_palette]
     use_palette = palette[:len(domain)]
     if reverse:
         use_palette = use_palette[::-1]
