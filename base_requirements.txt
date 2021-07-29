@@ -18,3 +18,4 @@ ruamel.yaml==0.17.10
 pypandoc==1.5
 flake8==3.9.2
 htmltabletomd==1.0.0
+rich==10.6.0
