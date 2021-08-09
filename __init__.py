@@ -6,6 +6,7 @@ from .exporters import render_to_markdown, render_to_html
 from .charting import enable_altair, altair_theme, save_chart
 from .dataframes import markdown_table
 from .progress import Progress, track_progress
+from typing import Union, Optional, List, Callable
 
 import pandas as pd
 import numpy as np
