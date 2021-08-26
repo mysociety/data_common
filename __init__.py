@@ -3,8 +3,7 @@ functions to speed up and pretify notebooks
 """
 
 from .exporters import render_to_markdown, render_to_html
-from .charting import enable_altair, altair_theme, save_chart
-from .dataframes import markdown_table
+from .charting import (altair_theme, Chart)
 from .progress import Progress, track_progress
 from .helpers.pipe import Pipe, iter_format
 from typing import Union, Optional, List, Callable
@@ -21,12 +20,13 @@ from dataclasses import dataclass
 import builtins as __builtin__
 builtin_print = __builtin__.print
 
-
 pd.options.mode.chained_assignment = None
 
+image_dir = Path("_images")
+render_dir = Path("_render")
 
 def notebook_setup():
-    enable_altair()
+    pass
 
 
 def Date(x):

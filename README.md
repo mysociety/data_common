@@ -3,6 +3,8 @@
 Tools to tidy up jupyter notebook use.
 Includes default mysociety theme for altair charts and helper functions to render to markdown readmes.
 
+To use the altair chart with support for our fonts + logo, use `Chart` rather than `alt.Chart`.
+
 In cell code at top include:
 
 ```

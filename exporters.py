@@ -21,7 +21,6 @@ from traitlets.config import Config
 
 notebook_render_dir = "_notebook_resources"
 
-
 class RemoveOnContent(Preprocessor):
     """
     remove on some content flags
