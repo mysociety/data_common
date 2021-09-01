@@ -21,6 +21,7 @@ from traitlets.config import Config
 
 notebook_render_dir = "_notebook_resources"
 
+
 class RemoveOnContent(Preprocessor):
     """
     remove on some content flags
@@ -196,9 +197,16 @@ class MarkdownRenderer(object):
                 table = convert_table(str(div))
                 div.replaceWith(table)
 
-            body = str(soup)
+            for div in soup.find_all("table"):
+                table = convert_table(str(div))
 
+                div.replaceWith(table)
+
+            body = str(soup)
+            body = body.replace("&lt;br/&gt;", "<br/>")
             body = body.replace("![png]", "![]")
+            body = body.replace('<style type="text/css">', "")
+            body = body.replace('</style>', "")
 
         # write main file
         with open(output_file, "w") as f:
