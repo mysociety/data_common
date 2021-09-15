@@ -2,7 +2,8 @@
 functions to speed up and pretify notebooks
 """
 
-from .exporters import render_to_markdown, render_to_html
+from .management.exporters import render_to_markdown, render_to_html
+from .management.settings import settings
 from .charting import (altair_theme, Chart)
 from .progress import Progress, track_progress
 from .helpers.pipe import Pipe, Pipeline, iter_format
@@ -25,6 +26,7 @@ pd.set_option("display.precision", 2)
 
 image_dir = Path("_images")
 render_dir = Path("_render")
+
 
 def notebook_setup():
     pass
