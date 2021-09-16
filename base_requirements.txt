@@ -19,4 +19,8 @@ pypandoc==1.5
 flake8==3.9.2
 htmltabletomd==1.0.0
 rich==10.6.0
-click
+click==8.0.1
+papermill==2.3.3
+google-api-python-client==2.21.0
+google-auth-httplib2==0.1.0
+google-auth-oauthlib==0.4.6

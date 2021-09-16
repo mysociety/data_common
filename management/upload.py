@@ -1,5 +1,7 @@
-from tools.google_api import DriveIntegration, ScriptIntergration, test_settings
+from notebook_helper.apis.google_api import (
+    DriveIntegration, ScriptIntergration, test_settings)
 from .settings import settings
+
 
 def upload_file(file_name, file_path, g_folder_id, g_drive_id):
     """
