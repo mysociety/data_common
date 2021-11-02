@@ -4,7 +4,7 @@ from selenium.common.exceptions import NoSuchElementException
 from typing import Any, Dict, IO, Iterable, Optional, Set, Type, Union
 from altair_saver.types import JSONDict, Mimebundle
 from altair_saver._utils import extract_format, infer_mode_from_spec
-
+from functools import partial
 from altair_saver.savers._selenium import (CDN_URL, EXTRACT_CODE,
                                            HTML_TEMPLATE, JavascriptError,
                                            MimebundleContent, SeleniumSaver,
@@ -102,7 +102,7 @@ async function add_footer(base64data) {
 
     font_size = 12 * scaleFactor;
     caption_offset = 7.5 * scaleFactor;
-    ctx.font = font_size + "px Source Sans Pro";
+    ctx.font = font_size + "px $$FONT$$";
     ctx.fillStyle = 'black';
     text_width = ctx.measureText(data_source + "   ").width;
     text_height = ctx.measureText('M').width;
@@ -134,7 +134,7 @@ async function add_footer(base64data) {
 
 WebFont.load({
             google: {
-            families: ['Source Sans Pro:400']
+            families: ['$$FONT$$:400']
             },
     active: load_chart
     })
@@ -144,14 +144,20 @@ WebFont.load({
 
 class MSSaver(SeleniumSaver):
 
+    logo_url = "https://research.mysociety.org/sites/foi-monitor/static/img/mysociety-logo.jpg"
+    font = "Source Sans Pro"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._logo = None
 
+    def _get_font(self):
+        return self.__class__.font
+
     def _get_logo(self):
         if self._logo is None:
-            self._logo = "data:image/jpg;base64," + get_as_base64(
-                "https://research.mysociety.org/sites/foi-monitor/static/img/mysociety-logo.jpg").decode()
+            self._logo = "data:image/jpg;base64," + \
+                get_as_base64(self.__class__.logo_url).decode()
         return self._logo
 
     def _extract(self, fmt: str) -> MimebundleContent:
@@ -202,7 +208,10 @@ class MSSaver(SeleniumSaver):
         opt = self._embed_options.copy()
         opt["mode"] = self._mode
 
-        extract_code = EXTRACT_CODE.replace("$$BASE64LOGO$$", str(self._get_logo()))
+        extract_code = EXTRACT_CODE.replace(
+            "$$BASE64LOGO$$", str(self._get_logo()))
+        extract_code = extract_code.replace(
+            "$$FONT$$", str(self._get_font()))
         result = driver.execute_async_script(
             extract_code, self._spec, opt, fmt)
         if "error" in result:
@@ -210,11 +219,17 @@ class MSSaver(SeleniumSaver):
         return result["result"]
 
 
+class SWSaver(MSSaver):
+    logo_url = "https://blogs.mysociety.org/mysociety/files/2021/04/societyworks-logo-white-background.jpg"
+    font = "Lato"
+
+
 def render(
     chart: Union[alt.TopLevelMixin, JSONDict],
     fmts: Union[str, Iterable[str]] = "png",
     mode: Optional[str] = None,
     embed_options: Optional[JSONDict] = None,
+    Saver=MSSaver,
     **kwargs: Any,
 ) -> Mimebundle:
 
@@ -234,9 +249,16 @@ def render(
     if embed_options is None:
         embed_options = alt.renderers.options.get("embed_options", None)
 
+    scale_factor = 1
+    if "scale_factor" in embed_options:
+        scale_factor = embed_options["scale_factor"]
+
     for fmt in fmts:
-        Saver = MSSaver
-        saver = Saver(spec, mode=mode, embed_options=embed_options, **kwargs)
+        saver = Saver(spec, mode=mode, embed_options=embed_options,
+                      scale_factor=scale_factor, **kwargs)
         mimebundle.update(saver.mimebundle(fmt))
 
     return mimebundle
+
+
+sw_render = partial(render, Saver=SWSaver)

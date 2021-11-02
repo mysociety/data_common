@@ -193,6 +193,9 @@ class MarkdownRenderer(object):
                 '<tr style="text-align: right;">\n      <th></th>', "<tr>")
             soup = BeautifulSoup(body, 'html.parser')
 
+            for div in soup.find_all("pagebreak"):
+                div.replaceWith('<div style="page-break-after: always"></div>')
+
             for div in soup.find_all("div"):
                 table = convert_table(str(div))
                 div.replaceWith(table)

@@ -7,6 +7,10 @@ from .saver import MSSaver
 from altair_saver import save as altair_save_chart
 
 
+class Renderer:
+    default_renderer = MSSaver
+
+
 def save_chart(chart, filename, scale_factor=1, **kwargs):
     """
         dumbed down version of altair save function that just assumes
@@ -17,11 +21,12 @@ def save_chart(chart, filename, scale_factor=1, **kwargs):
         if filename.parent.exists() is False:
             filename.parent.mkdir()
         filename = str(filename)
+
     altair_save_chart(chart,
                       filename,
                       scale_factor=scale_factor,
                       embed_options=kwargs,
-                      method=MSSaver)
+                      method=Renderer.default_renderer)
 
 
 class MSDisplayMixIn:
