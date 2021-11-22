@@ -250,7 +250,7 @@ def render(
         embed_options = alt.renderers.options.get("embed_options", None)
 
     scale_factor = 1
-    if "scale_factor" in embed_options:
+    if embed_options and "scale_factor" in embed_options:
         scale_factor = embed_options["scale_factor"]
 
     for fmt in fmts:
