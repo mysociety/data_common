@@ -46,3 +46,7 @@ def notebook_setup():
 
 def Date(x):
     return datetime.datetime.fromisoformat(x).date()
+
+
+comma_thousands = '{:,}'.format
+percentage_1dp = '{:,.1%}'.format
