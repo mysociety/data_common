@@ -4,7 +4,7 @@ functions to speed up and pretify notebooks
 
 from .management.exporters import render_to_markdown, render_to_html
 from .management.settings import settings
-from .charting import (altair_theme, altair_sw_theme, Chart, enable_sw_charts)
+from .charting import (altair_theme, altair_sw_theme, Chart, enable_sw_charts, ChartEncoding)
 from .progress import Progress, track_progress
 from .helpers.pipe import Pipe, Pipeline, iter_format
 from typing import Union, Optional, List, Callable

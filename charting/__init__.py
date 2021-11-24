@@ -1,6 +1,6 @@
 from . import theme as altair_theme
 from . import sw_theme as altair_sw_theme
-from .chart import Chart, Renderer
+from .chart import Chart, Renderer, ChartEncoding
 from .saver import MSSaver, SWSaver, render, sw_render
 import altair as alt
 
@@ -18,3 +18,5 @@ def enable_sw_charts():
     alt.renderers.register('sw_saver', sw_render)
     alt.renderers.enable('sw_saver')
     Renderer.default_renderer = SWSaver
+
+

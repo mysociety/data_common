@@ -1,10 +1,12 @@
+from functools import wraps
 from pathlib import Path
 from typing import List, Optional
 
 import altair as alt
 import pandas as pd
-from .saver import MSSaver
 from altair_saver import save as altair_save_chart
+
+from .saver import MSSaver
 
 
 class Renderer:
@@ -146,3 +148,11 @@ def hconcat(*charts, **kwargs):
 def vconcat(*charts, **kwargs):
     """Concatenate charts horizontally"""
     return VConcatChart(vconcat=charts, **kwargs)
+
+
+@wraps(Chart.encode)
+def ChartEncoding(**kwargs):
+    """
+    Thin wrapper to specify properites we want to use multiple times
+    """
+    return kwargs
