@@ -24,3 +24,4 @@ papermill==2.3.3
 google-api-python-client==2.21.0
 google-auth-httplib2==0.1.0
 google-auth-oauthlib==0.4.6
+ptitprince==0.2.5
