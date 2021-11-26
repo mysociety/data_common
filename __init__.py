@@ -2,23 +2,26 @@
 functions to speed up and pretify notebooks
 """
 
-from .management.exporters import render_to_markdown, render_to_html
-from .management.settings import settings
-from .charting import (altair_theme, altair_sw_theme, Chart, enable_sw_charts, ChartEncoding)
-from .progress import Progress, track_progress
-from .helpers.pipe import Pipe, Pipeline, iter_format
-from typing import Union, Optional, List, Callable
-from functools import partial
-
-import pandas as pd
-import numpy as np
-import altair as alt
-from pathlib import Path
-from IPython.display import Markdown as md
+import builtins as __builtin__
 import datetime
 from dataclasses import dataclass
+from functools import partial
+from pathlib import Path
+from typing import Callable, List, Optional, Union
 
-import builtins as __builtin__
+import altair as alt
+import numpy as np
+import pandas as pd
+from IPython.display import Markdown as md
+
+from .charting import (Chart, ChartEncoding, altair_sw_theme, altair_theme,
+                       enable_sw_charts)
+from .df_extensions import space, viz, common
+from .helpers.pipe import Pipe, Pipeline, iter_format
+from .management.exporters import render_to_html, render_to_markdown
+from .management.settings import settings
+from .progress import Progress, track_progress
+
 builtin_print = __builtin__.print
 
 pd.options.mode.chained_assignment = None
@@ -49,4 +52,6 @@ def Date(x):
 
 
 comma_thousands = '{:,}'.format
+percentage_0dp = '{:,.0%}'.format
 percentage_1dp = '{:,.1%}'.format
+percentage_2dp = '{:,.2%}'.format
