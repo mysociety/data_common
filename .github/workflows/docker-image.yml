@@ -33,7 +33,6 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # minimal (short sha)
             type=sha
             type=ref,event=branch
 
