@@ -24,4 +24,4 @@ google-auth-httplib2==0.1.0
 google-auth-oauthlib==0.4.6
 ptitprince==0.2.5
 pylint==2.12.2
-black==21.12b0
+black[jupyter]==21.12b0
