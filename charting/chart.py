@@ -153,6 +153,6 @@ def vconcat(*charts, **kwargs):
 @wraps(Chart.encode)
 def ChartEncoding(**kwargs):
     """
-    Thin wrapper to specify properites we want to use multiple times
+    Thin wrapper to specify properties we want to use multiple times
     """
     return kwargs
