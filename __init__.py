@@ -16,8 +16,13 @@ import numpy as np
 import pandas as pd
 from IPython.display import Markdown as md
 
-from .charting import (Chart, ChartEncoding, altair_sw_theme, altair_theme,
-                       enable_sw_charts)
+from .charting import (
+    Chart,
+    ChartEncoding,
+    altair_sw_theme,
+    altair_theme,
+    enable_sw_charts,
+)
 from .df_extensions import common, space, viz
 from .helpers.pipe import Pipe, Pipeline, iter_format
 from .management.exporters import render_to_html, render_to_markdown
@@ -34,7 +39,8 @@ render_dir = Path("_render")
 
 
 def page_break():
-    return md("""
+    return md(
+        """
     ```{=openxml}
 <w:p>
   <w:r>
@@ -42,7 +48,8 @@ def page_break():
   </w:r>
 </w:p>
 ```
-""")
+"""
+    )
 
 
 def notebook_setup():
@@ -59,13 +66,14 @@ def slugify(value):
     underscores) and converts spaces to hyphens. Also strips leading and
     trailing whitespace.
     """
-    value = unicodedata.normalize('NFKD', value).encode(
-        'ascii', 'ignore').decode('ascii')
-    value = re.sub('[^\w\s-]', '', value).strip().lower()
-    return re.sub('[-\s]+', '-', value)
+    value = (
+        unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    )
+    value = re.sub("[^\w\s-]", "", value).strip().lower()
+    return re.sub("[-\s]+", "-", value)
 
 
-comma_thousands = '{:,}'.format
-percentage_0dp = '{:,.0%}'.format
-percentage_1dp = '{:,.1%}'.format
-percentage_2dp = '{:,.2%}'.format
+comma_thousands = "{:,}".format
+percentage_0dp = "{:,.0%}".format
+percentage_1dp = "{:,.1%}".format
+percentage_2dp = "{:,.2%}".format

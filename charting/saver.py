@@ -5,10 +5,15 @@ from typing import Any, Dict, IO, Iterable, Optional, Set, Type, Union
 from altair_saver.types import JSONDict, Mimebundle
 from altair_saver._utils import extract_format, infer_mode_from_spec
 from functools import partial
-from altair_saver.savers._selenium import (CDN_URL, EXTRACT_CODE,
-                                           HTML_TEMPLATE, JavascriptError,
-                                           MimebundleContent, SeleniumSaver,
-                                           get_bundled_script)
+from altair_saver.savers._selenium import (
+    CDN_URL,
+    EXTRACT_CODE,
+    HTML_TEMPLATE,
+    JavascriptError,
+    MimebundleContent,
+    SeleniumSaver,
+    get_bundled_script,
+)
 
 import altair as alt
 
@@ -144,7 +149,9 @@ WebFont.load({
 
 class MSSaver(SeleniumSaver):
 
-    logo_url = "https://research.mysociety.org/sites/foi-monitor/static/img/mysociety-logo.jpg"
+    logo_url = (
+        "https://research.mysociety.org/sites/foi-monitor/static/img/mysociety-logo.jpg"
+    )
     font = "Source Sans Pro"
 
     def __init__(self, *args, **kwargs):
@@ -156,8 +163,10 @@ class MSSaver(SeleniumSaver):
 
     def _get_logo(self):
         if self._logo is None:
-            self._logo = "data:image/jpg;base64," + \
-                get_as_base64(self.__class__.logo_url).decode()
+            self._logo = (
+                "data:image/jpg;base64,"
+                + get_as_base64(self.__class__.logo_url).decode()
+            )
         return self._logo
 
     def _extract(self, fmt: str) -> MimebundleContent:
@@ -208,12 +217,9 @@ class MSSaver(SeleniumSaver):
         opt = self._embed_options.copy()
         opt["mode"] = self._mode
 
-        extract_code = EXTRACT_CODE.replace(
-            "$$BASE64LOGO$$", str(self._get_logo()))
-        extract_code = extract_code.replace(
-            "$$FONT$$", str(self._get_font()))
-        result = driver.execute_async_script(
-            extract_code, self._spec, opt, fmt)
+        extract_code = EXTRACT_CODE.replace("$$BASE64LOGO$$", str(self._get_logo()))
+        extract_code = extract_code.replace("$$FONT$$", str(self._get_font()))
+        result = driver.execute_async_script(extract_code, self._spec, opt, fmt)
         if "error" in result:
             raise JavascriptError(result["error"])
         return result["result"]
@@ -254,8 +260,13 @@ def render(
         scale_factor = embed_options["scale_factor"]
 
     for fmt in fmts:
-        saver = Saver(spec, mode=mode, embed_options=embed_options,
-                      scale_factor=scale_factor, **kwargs)
+        saver = Saver(
+            spec,
+            mode=mode,
+            embed_options=embed_options,
+            scale_factor=scale_factor,
+            **kwargs,
+        )
         mimebundle.update(saver.mimebundle(fmt))
 
     return mimebundle

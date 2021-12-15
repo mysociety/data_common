@@ -3,7 +3,6 @@ from notebook_helper.management.render_processing import DocumentCollection
 
 
 class DocCollection:
-
     def __init__(self):
         self.collection = None
 
@@ -21,7 +20,7 @@ def cli():
 
 
 @cli.command()
-@click.argument('slug', default="")
+@click.argument("slug", default="")
 @click.option("-p", "--param", nargs=2, multiple=True)
 def render(slug="", param=[]):
     doc_collection = dc.collection
@@ -37,7 +36,7 @@ def render(slug="", param=[]):
 
 
 @cli.command()
-@click.argument('slug', default="")
+@click.argument("slug", default="")
 def upload(slug=""):
     doc_collection = dc.collection
     if slug:

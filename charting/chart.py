@@ -15,8 +15,8 @@ class Renderer:
 
 def save_chart(chart, filename, scale_factor=1, **kwargs):
     """
-        dumbed down version of altair save function that just assumes
-        we're sending extra properties to the embed options
+    dumbed down version of altair save function that just assumes
+    we're sending extra properties to the embed options
     """
     if isinstance(filename, Path):
         # altair doesn't process paths right
@@ -24,11 +24,13 @@ def save_chart(chart, filename, scale_factor=1, **kwargs):
             filename.parent.mkdir()
         filename = str(filename)
 
-    altair_save_chart(chart,
-                      filename,
-                      scale_factor=scale_factor,
-                      embed_options=kwargs,
-                      method=Renderer.default_renderer)
+    altair_save_chart(
+        chart,
+        filename,
+        scale_factor=scale_factor,
+        embed_options=kwargs,
+        method=Renderer.default_renderer,
+    )
 
 
 class MSDisplayMixIn:
@@ -93,6 +95,7 @@ class MSDataManagementMixIn:
     @classmethod
     def from_url(cls, url, n=0):
         from .download import get_chart_from_url
+
         return get_chart_from_url(url, n)
 
     def _get_df(self) -> pd.DataFrame:
@@ -102,7 +105,7 @@ class MSDataManagementMixIn:
         """
         take a new df and update the chart
         """
-        self.datasets[self.data["name"]] = df.to_dict('records')
+        self.datasets[self.data["name"]] = df.to_dict("records")
         return self
 
     @property

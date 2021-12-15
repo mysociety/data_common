@@ -42,10 +42,10 @@ def render(txt: str, context: dict):
 
 
 def combine_outputs(parts, output_path):
-    text_parts = [open(p, 'r').read() for p in parts]
+    text_parts = [open(p, "r").read() for p in parts]
     result = "\n".join(text_parts)
     result = result.replace("<title>Notebook</title>", "")
-    with open(output_path, 'w') as f:
+    with open(output_path, "w") as f:
         f.write(result)
 
 
@@ -54,6 +54,7 @@ class Notebook:
     """
     Handle talking to and rendering one file
     """
+
     name: str
     _parent: "Document"
 
@@ -81,12 +82,9 @@ class Notebook:
             print("Not papermilling, just copying current file")
             shutil.copy(self.raw_path(), self.papermill_path(slug))
         else:
-            add_tag_based_on_content(
-                actual_path, "parameters", "#default-params")
+            add_tag_based_on_content(actual_path, "parameters", "#default-params")
             pm.execute_notebook(
-                actual_path,
-                self.papermill_path(slug),
-                parameters=params
+                actual_path, self.papermill_path(slug), parameters=params
             )
 
     def rendered_filename(self, slug: str, ext: str = ".md"):
@@ -106,13 +104,17 @@ class Notebook:
         include_input = not hide_input
         input_path = self.papermill_path(slug)
         exporters.render_to_markdown(
-            input_path, self.rendered_filename(slug, ".md"),
+            input_path,
+            self.rendered_filename(slug, ".md"),
             clear_and_execute=False,
-            include_input=include_input)
+            include_input=include_input,
+        )
         exporters.render_to_html(
-            input_path, self.rendered_filename(slug, ".html"),
+            input_path,
+            self.rendered_filename(slug, ".html"),
             clear_and_execute=False,
-            include_input=include_input)
+            include_input=include_input,
+        )
 
 
 class Document:
@@ -127,8 +129,7 @@ class Document:
         self._data = data.copy()
         self.options = {"rerun": True, "hide_input": True}
         self.options.update(self._data.get("options", {}))
-        self.notebooks = [Notebook(x, _parent=self)
-                          for x in self._data["notebooks"]]
+        self.notebooks = [Notebook(x, _parent=self) for x in self._data["notebooks"]]
         self.init_rendered_values(context)
 
     def init_rendered_values(self, context):
@@ -193,8 +194,7 @@ class Document:
         # combine for both md and html
         for ext in [".md", ".html"]:
             dest = self.rendered_filename(ext)
-            files = [x.rendered_filename(self.slug, ext)
-                     for x in self.notebooks]
+            files = [x.rendered_filename(self.slug, ext) for x in self.notebooks]
             combine_outputs(files, dest)
             resources_dir = files[0].parent / "_notebook_resources"
             dest_resources = dest.parent / "_notebook_resources"
@@ -208,9 +208,15 @@ class Document:
         if template.exists() is False:
             raise ValueError("Missing Template")
         reference_doc = str(template)
-        pypandoc.convert_file(str(input_path_html), 'docx', outputfile=str(
-            output_path_doc), extra_args=[f"--resource-path={str(render_dir)}",
-                                          f"--reference-doc={reference_doc}"])
+        pypandoc.convert_file(
+            str(input_path_html),
+            "docx",
+            outputfile=str(output_path_doc),
+            extra_args=[
+                f"--resource-path={str(render_dir)}",
+                f"--reference-doc={reference_doc}",
+            ],
+        )
 
     def upload(self):
         """
@@ -222,8 +228,7 @@ class Document:
                 file_path = self.rendered_filename(".docx")
                 g_folder_id = v["g_folder_id"]
                 g_drive_id = v["g_drive_id"]
-                g_drive_upload_and_format(
-                    file_name, file_path, g_folder_id, g_drive_id)
+                g_drive_upload_and_format(file_name, file_path, g_folder_id, g_drive_id)
 
 
 class DocumentCollection:

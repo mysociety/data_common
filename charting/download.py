@@ -1,9 +1,9 @@
-
 from typing import List
 from urllib.request import urlopen
 import altair as alt
 from .chart import Chart, LayerChart
 import json
+
 
 def get_chart_spec_from_url(url: str) -> List[str]:
     """
@@ -26,7 +26,8 @@ def json_to_chart(json_spec: str) -> alt.Chart:
         del di["layer"]
         del di["width"]
         chart = LayerChart.from_dict(
-            {"config": di["config"], "layer": [], "datasets": di["datasets"]})
+            {"config": di["config"], "layer": [], "datasets": di["datasets"]}
+        )
         for n, l in enumerate(layers):
             di_copy = di.copy()
             di_copy.update(l)
@@ -43,11 +44,9 @@ def json_to_chart(json_spec: str) -> alt.Chart:
     return chart
 
 
-def get_chart_from_url(url: str,
-                       n: int = 0,
-                       include_df: bool = False) -> alt.Chart:
+def get_chart_from_url(url: str, n: int = 0, include_df: bool = False) -> alt.Chart:
     """
-    given url, a number (0 indexed), get the spec, 
+    given url, a number (0 indexed), get the spec,
     and reduce an altair chart instance.
     if `include_df` will try and reduce the original df as well.
     """

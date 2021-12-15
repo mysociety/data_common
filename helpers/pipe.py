@@ -12,7 +12,6 @@ import itertools
 
 
 class PartialLibrary:
-
     def __init__(self, library):
         self._library = library
 
@@ -44,14 +43,12 @@ def amend_partial(pfunc: Callable, value: Any) -> Tuple[Callable, str]:
         return pfunc, self_contained
 
     args = [x if x != PipeValue else value for x in pfunc.args]
-    kwargs = {k: (v if v != PipeValue else value)
-              for k, v in pfunc.keywords.items()}
+    kwargs = {k: (v if v != PipeValue else value) for k, v in pfunc.keywords.items()}
 
     return partial(pfunc.func, *args, **kwargs), self_contained
 
 
 class PipeStart:
-
     def __init__(self, value):
         self.value = value
         self.operations = []
@@ -91,6 +88,7 @@ class Pipe:
     Starting value, then a list of functions to pass the result through.
     Current value can be referred as Pipe.value if it can't be passed through one value in a partial.
     """
+
     start = PipeStart
     value = PipeValue
     end = PipeEnd()
