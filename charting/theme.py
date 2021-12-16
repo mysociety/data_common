@@ -34,6 +34,8 @@ adjusted_colours = {
     "colour_purple": "#a94ca6",
     "colour_blue": "#4faded",
     "colour_dark_blue": "#0a4166",
+    "colour_mid_grey": "#959287",
+    "colour_dark_grey": "#6c6b68",
 }
 
 monochrome_colours = {
