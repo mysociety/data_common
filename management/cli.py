@@ -22,25 +22,46 @@ def cli():
 @cli.command()
 @click.argument("slug", default="")
 @click.option("-p", "--param", nargs=2, multiple=True)
-def render(slug="", param=[]):
-    doc_collection = dc.collection
+@click.option("-g", "--group", nargs=1)
+@click.option("--all/--not-all", "render_all", default=False)
+@click.option("--publish/--no-publish", default=False)
+def render(slug="", param=[], group="", render_all=False, publish=False):
     params = {x: y for x, y in param}
     if slug:
-        doc = doc_collection.get(slug)
+        docs = [dc.collection.get(slug)]
+    elif render_all:
+        docs = dc.collection.all()
+    elif group:
+        docs = dc.collection.get_group(group)
     else:
-        doc = doc_collection.first()
+        docs = [dc.collection.first()]
+
     if params:
         print("using custom params")
         print(params)
-    doc.render(context=params)
+
+    for doc in docs:
+        doc.render(context=params)
+        if publish:
+            print("starting publication flow")
+            doc.upload()
 
 
 @cli.command()
 @click.argument("slug", default="")
-def upload(slug=""):
-    doc_collection = dc.collection
+@click.option("--all/--not-all", "render_all", default=False)
+def upload(slug="", param=[], render_all=False):
+    params = {x: y for x, y in param}
     if slug:
-        doc = doc_collection.get(slug)
+        docs = [dc.collection.get(slug)]
+    elif render_all:
+        docs = dc.collection.all()
     else:
-        doc = doc_collection.first()
-    doc.upload()
+        docs = [dc.collection.first()]
+
+    if params:
+        print("using custom params")
+        print(params)
+
+    for doc in docs:
+        doc.upload()

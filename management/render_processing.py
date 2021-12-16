@@ -1,9 +1,11 @@
 import json
+import shutil
+from copy import deepcopy
 from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
 from typing import Iterable, Optional
-import shutil
+
 import papermill as pm
 import pypandoc
 from jinja2 import Template
@@ -38,7 +40,8 @@ def add_tag_based_on_content(input_file: Path, tag: str, content: str):
 
 
 def render(txt: str, context: dict):
-    return Template(txt).render(**context)
+    t = Template(str(txt))
+    return t.render(**context)
 
 
 def combine_outputs(parts, output_path):
@@ -158,7 +161,7 @@ class Document:
         """
         render properties using jinga
         """
-        raw_params = self._data["parameters"]
+        raw_params = self._data.get("parameters", {})
         final_params = {}
         for k, v in raw_params.items():
             nv = context.get(k, render(v, context))
@@ -244,11 +247,33 @@ class DocumentCollection:
         return cls(data)
 
     def __init__(self, data: dict):
+
+        for k, v in data.items():
+            if "meta" not in v:
+                data[k]["meta"] = False
+            if "extends" in v:
+                base = deepcopy(data[v["extends"]])
+                if "meta" in base:
+                    base.pop("meta")
+                base.update(v)
+                base.pop("extends")
+                data[k] = base
+
+        for k, v in data.items():
+            if "group" not in v:
+                data[k]["group"] = None
+
         self.docs = {name: Document(name, data) for name, data in data.items()}
 
     def all(self) -> Iterable:
         for d in self.docs.values():
-            yield d
+            if d._data["meta"] is False:
+                yield d
+
+    def get_group(self, group: str) -> Iterable:
+        for d in self.all():
+            if d._data["group"] == group:
+                yield d
 
     def first(self) -> Document:
         return list(self.docs.values())[0]
