@@ -22,6 +22,7 @@ from .charting import (
     altair_sw_theme,
     altair_theme,
     enable_sw_charts,
+    ChartTitle
 )
 from .df_extensions import common, space, viz
 from .helpers.pipe import Pipe, Pipeline, iter_format

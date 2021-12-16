@@ -1,7 +1,8 @@
 from . import theme as altair_theme
 from . import sw_theme as altair_sw_theme
-from .chart import Chart, Renderer, ChartEncoding
+from .chart import Chart, Renderer, ChartEncoding, ChartTitle
 from .saver import MSSaver, SWSaver, render, sw_render
+
 import altair as alt
 
 alt.themes.register("mysoc_theme", lambda: altair_theme.mysoc_theme)
