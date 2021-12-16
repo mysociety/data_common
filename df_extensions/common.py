@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 @pd.api.extensions.register_series_accessor("common")
 class CommonAccessor(object):
     """

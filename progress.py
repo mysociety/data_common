@@ -5,12 +5,15 @@ from rich import get_console
 
 console = get_console()
 
-def track_progress(iterable: Iterable,
-                   name: Optional[str] = None,
-                   total: Optional[int] = None,
-                   update_label: bool = False,
-                   label_func: Optional[Callable] = lambda x: x,
-                   clear: Optional[bool] = True):
+
+def track_progress(
+    iterable: Iterable,
+    name: Optional[str] = None,
+    total: Optional[int] = None,
+    update_label: bool = False,
+    label_func: Optional[Callable] = lambda x: x,
+    clear: Optional[bool] = True,
+):
     """
     simple tracking loop using rich progress
     """

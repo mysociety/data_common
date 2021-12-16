@@ -1,6 +1,6 @@
 from functools import wraps
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import altair as alt
 import pandas as pd
@@ -15,8 +15,8 @@ class Renderer:
 
 def save_chart(chart, filename, scale_factor=1, **kwargs):
     """
-        dumbed down version of altair save function that just assumes
-        we're sending extra properties to the embed options
+    dumbed down version of altair save function that just assumes
+    we're sending extra properties to the embed options
     """
     if isinstance(filename, Path):
         # altair doesn't process paths right
@@ -24,11 +24,58 @@ def save_chart(chart, filename, scale_factor=1, **kwargs):
             filename.parent.mkdir()
         filename = str(filename)
 
-    altair_save_chart(chart,
-                      filename,
-                      scale_factor=scale_factor,
-                      embed_options=kwargs,
-                      method=Renderer.default_renderer)
+    altair_save_chart(
+        chart,
+        filename,
+        scale_factor=scale_factor,
+        embed_options=kwargs,
+        method=Renderer.default_renderer,
+    )
+
+
+def split_text_to_line(text: str, cut_off: int = 60) -> List[str]:
+    """
+    Split a string to meet line limit
+    """
+    bits = text.split(" ")
+    rows = []
+    current_item = []
+    for b in bits:
+        if len(" ".join(current_item + [b])) > cut_off:
+            rows.append(" ".join(current_item))
+            current_item = []
+        current_item.append(b)
+    rows.append(" ".join(current_item))
+    return rows
+
+
+class ChartTitle(alt.TitleParams):
+    """
+    Helper function for chart title
+    Includes better line wrapping
+    """
+
+    def __init__(
+        self,
+        title: Union[str, List[str]],
+        subtitle: Optional[Union[str, List[str]]] = None,
+        line_limit: int = 60,
+        **kwargs
+    ):
+
+        if isinstance(title, str):
+            title_bits = split_text_to_line(title, line_limit)
+        else:
+            title_bits = title
+
+        if isinstance(subtitle, str):
+            subtitle = [subtitle]
+
+        kwargs["text"] = title_bits
+        if subtitle:
+            kwargs["subtitle"] = subtitle
+
+        super().__init__(**kwargs)
 
 
 class MSDisplayMixIn:
@@ -38,10 +85,11 @@ class MSDisplayMixIn:
     """
 
     ignore_properties = ["_display_options"]
+    scale_factor = 1
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._display_options = {}
+        self._display_options = {"scale_factor": self.__class__.scale_factor}
 
     def display_options(self, **kwargs):
         """
@@ -81,6 +129,60 @@ class MSDisplayMixIn:
             raise ValueError("Only Chart objects can be concatenated.")
         return hconcat(self, other)
 
+    @wraps(alt.Chart.properties)
+    def raw_properties(self, *args, **kwargs):
+        return super().properties(*args, **kwargs)
+
+    def properties(
+        self,
+        title: Optional[Union[str, list, alt.TitleParams, ChartTitle]] = "",
+        title_line_limit: Optional[int] = 60,
+        subtitle: Optional[Union[str, list]] = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        aspect: Optional[tuple] = (16, 9),
+        logo: bool = False,
+        caption: Optional[str] = "",
+        scale_factor: Optional[str] = None,
+        **kwargs
+    ) -> "Chart":
+
+        args = {}
+        display_args = {"logo": logo, "caption": caption}
+        if scale_factor:
+            display_args["scale_factor"] = scale_factor
+
+        if isinstance(title, str) or isinstance(title, list) or subtitle is not None:
+            args["title"] = ChartTitle(
+                title=title, subtitle=subtitle, line_limit=title_line_limit
+            )
+
+        if width and not height:
+            args["width"] = width
+            args["height"] = (width / aspect[0]) * aspect[1]
+
+        if height and not width:
+            args["height"] = height
+            args["width"] = (height / aspect[1]) * aspect[0]
+
+        if width and height:
+            args["height"] = height
+            args["width"] = width
+
+        width_offset = 0
+        height_offset = 0
+
+        if logo or caption:
+            height_offset += 100
+
+        if "width" in args:
+            args["width"] -= width_offset
+            args["height"] -= height_offset
+            args["autosize"] = alt.AutoSizeParams(type="fit", contains="padding")
+
+        kwargs.update(args)
+        return super().properties(**kwargs).display_options(**display_args)
+
 
 class MSDataManagementMixIn:
     """
@@ -93,6 +195,7 @@ class MSDataManagementMixIn:
     @classmethod
     def from_url(cls, url, n=0):
         from .download import get_chart_from_url
+
         return get_chart_from_url(url, n)
 
     def _get_df(self) -> pd.DataFrame:
@@ -102,7 +205,7 @@ class MSDataManagementMixIn:
         """
         take a new df and update the chart
         """
-        self.datasets[self.data["name"]] = df.to_dict('records')
+        self.datasets[self.data["name"]] = df.to_dict("records")
         return self
 
     @property
@@ -119,19 +222,23 @@ class MSDataManagementMixIn:
             super().__setattribute__(key, value)
 
 
-class Chart(MSDisplayMixIn, MSDataManagementMixIn, alt.Chart):
+class MSAltair(MSDisplayMixIn, MSDataManagementMixIn):
     pass
 
 
-class LayerChart(MSDisplayMixIn, MSDataManagementMixIn, alt.LayerChart):
+class Chart(MSAltair, alt.Chart):
     pass
 
 
-class HConcatChart(MSDisplayMixIn, MSDataManagementMixIn, alt.HConcatChart):
+class LayerChart(MSAltair, alt.LayerChart):
     pass
 
 
-class VConcatChart(MSDisplayMixIn, MSDataManagementMixIn, alt.VConcatChart):
+class HConcatChart(MSAltair, alt.HConcatChart):
+    pass
+
+
+class VConcatChart(MSAltair, alt.VConcatChart):
     pass
 
 
@@ -153,6 +260,6 @@ def vconcat(*charts, **kwargs):
 @wraps(Chart.encode)
 def ChartEncoding(**kwargs):
     """
-    Thin wrapper to specify properites we want to use multiple times
+    Thin wrapper to specify properties we want to use multiple times
     """
     return kwargs

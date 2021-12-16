@@ -20,7 +20,7 @@ def get_settings(yaml_file: str = "settings.yaml", env_file: str = ".env"):
         return {}
 
     settings_file = Path(*top_level, yaml_file)
-    with open(settings_file, 'r') as fp:
+    with open(settings_file, "r") as fp:
         data = yaml.load(fp, Loader=yaml.Loader)
 
     env_data = {}
