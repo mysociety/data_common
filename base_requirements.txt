@@ -24,3 +24,5 @@ google-auth-oauthlib==0.4.6
 ptitprince==0.2.5
 pylint==2.12.2
 black[jupyter]==21.12b0
+jupyterlab==3.2.6
+jupyterlab-link-share==0.2.4
