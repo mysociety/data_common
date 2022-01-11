@@ -42,3 +42,9 @@ unzip 1.075R-it.zip
 cp source-sans-2.020R-ro-1.075R-it/OTF/*.otf ~/.fonts/
 
 fc-cache -f -v
+
+cd /tmp/
+wget https://github.com/valentjn/ltex-ls/releases/download/15.2.0/ltex-ls-15.2.0-linux-x64.tar.gz
+mkdir /usr/ltex
+tar -xf ltex-ls-15.2.0-linux-x64.tar.gz -C /usr/ltex
+rm ltex-ls-15.2.0-linux-x64.tar.gz
