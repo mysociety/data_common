@@ -126,7 +126,13 @@ font = "Lato"
 sw_theme = {
     "config": {
         "padding": {"left": 5, "top": 5, "right": 20, "bottom": 5},
-        "title": {"font": font, "fontSize": 30, "anchor": "start"},
+        "title": {
+            "font": font,
+            "fontSize": 30,
+            "anchor": "start",
+            "subtitleFontSize": 20,
+            "subtitleFont": font,
+        },
         "axis": {
             "labelFont": font,
             "labelFontSize": 14,
