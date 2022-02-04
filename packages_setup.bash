@@ -45,6 +45,6 @@ fc-cache -f -v
 
 cd /tmp/
 wget https://github.com/valentjn/ltex-ls/releases/download/15.2.0/ltex-ls-15.2.0-linux-x64.tar.gz
-mkdir /usr/ltex
-tar -xf ltex-ls-15.2.0-linux-x64.tar.gz -C /usr/ltex
+mkdir /ltex
+tar -xf ltex-ls-15.2.0-linux-x64.tar.gz -C /ltex
 rm ltex-ls-15.2.0-linux-x64.tar.gz
