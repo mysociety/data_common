@@ -133,6 +133,12 @@ class MSDisplayMixIn:
     def raw_properties(self, *args, **kwargs):
         return super().properties(*args, **kwargs)
 
+    def big_labels(self) -> "Chart":
+        """
+        quick helper function to add a bigger label limit
+        """
+        return self.configure_axis(labelLimit=1000)
+
     def properties(
         self,
         title: Optional[Union[str, list, alt.TitleParams, ChartTitle]] = "",
