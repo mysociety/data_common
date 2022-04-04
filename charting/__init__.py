@@ -13,6 +13,7 @@ alt.renderers.enable("mysoc_saver")
 
 reset_renderer = MSSaver.reset_driver
 
+
 def enable_sw_charts():
     alt.themes.register("societyworks_theme", lambda: altair_sw_theme.sw_theme)
     alt.themes.enable("societyworks_theme")

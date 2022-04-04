@@ -1,9 +1,9 @@
+import copy
 import math
 import random
-from functools import reduce, partial
+from functools import partial, reduce
 from itertools import combinations, product
-from typing import Any, Dict, List, Optional, Union, Tuple, Callable
-import copy
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,7 +16,6 @@ from notebook_helper.charting.theme import mysoc_palette_colors
 from scipy.spatial.distance import pdist, squareform
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
-
 
 from . import viz
 
@@ -49,7 +48,7 @@ class Cluster:
         cols: Optional[List[str]] = None,
         label_cols: Optional[List[str]] = None,
         normalize: bool = True,
-        transform: List[Callable] = None,
+        transform: Optional[Dict[str, Callable]] = None,
         k: Optional[int] = 2,
     ):
         """
@@ -96,8 +95,8 @@ class Cluster:
         if normalize:
             df = df.apply(fnormalize, axis=0)
         if transform:
-            for k, v in transform.items():
-                df[k] = v(df[k])
+            for col, transform_func in transform.items():
+                df[col] = transform_func(df[col])
 
         self.df = df
         self.cols = cols
@@ -142,14 +141,19 @@ class Cluster:
         return name
 
     def get_label_options(self) -> list:
-
+        if not self.k:
+            raise ValueError("No K set")
         return [self.get_label_name(x) for x in range(0, self.k)]
 
     def get_cluster_label_ids(self) -> pd.Series:
+        if not self.k:
+            raise ValueError("No K set")
         labels = pd.Series(self.get_clusters(self.k).labels_) + 1
         return labels
 
-    def get_cluster_labels(self, include_short=True) -> np.array:
+    def get_cluster_labels(self, include_short=True) -> np.ndarray:
+        if not self.k:
+            raise ValueError("No K set")
 
         labels = pd.Series(self.get_clusters(self.k).labels_)
 
@@ -161,8 +165,9 @@ class Cluster:
 
     label_array = get_cluster_labels
 
-    def get_cluster_descs(self) -> np.array:
-
+    def get_cluster_descs(self) -> np.ndarray:
+        if not self.k:
+            raise ValueError("No k")
         labels = pd.Series(self.get_clusters(self.k).labels_)
         labels = labels.apply(lambda x: self.get_label_desc(n=x))
         return np.array(labels)
@@ -213,7 +218,7 @@ class Cluster:
         combos = list(combinations(vars, 2))
         rows = math.ceil(len(combos) / num_rows)
 
-        plt.rcParams["figure.figsize"] = (15, 5 * rows)
+        plt.rcParams["figure.figsize"] = (15, 5 * rows)  # type: ignore
 
         df["labels"] = self.get_cluster_labels()
 
@@ -223,7 +228,7 @@ class Cluster:
         chart_no = 0
 
         rgb_values = sns.color_palette("Set2", len(df["labels"].unique()))
-        color_map = dict(zip(df["labels"].unique(), rgb_values))
+        color_map = dict(zip(df["labels"].unique(), rgb_values))  # type: ignore
         fig = plt.figure()
 
         for x_var, y_var in combos:
@@ -255,7 +260,7 @@ class Cluster:
         }
 
         tool = interactive(
-            func,
+            func,  # type: ignore
             cluster=cluster_options,
             **analysis_options,
             show_legend=False,
@@ -290,12 +295,12 @@ class Cluster:
         def s_score(kmeans):
             return silhouette_score(self.df, kmeans.labels_, metric="euclidean")
 
-        df = pd.DataFrame({"n": range(start, stop, step)})
+        df = pd.DataFrame({"n": range(start, stop, step)})  # type: ignore
         df["k_means"] = df["n"].apply(self.get_clusters)
         df["sum_squares"] = df["k_means"].apply(lambda x: x.inertia_)
         df["silhouette"] = df["k_means"].apply(s_score)
 
-        plt.rcParams["figure.figsize"] = (10, 5)
+        plt.rcParams["figure.figsize"] = (10, 5)  # type: ignore
         plt.subplot(1, 2, 1)
         plt.plot(df["n"], df["sum_squares"], "bx-")
         plt.xlabel("k")
@@ -313,7 +318,6 @@ class Cluster:
         """
         Simple description of sample size
         """
-        k = self.k
         if label_lookup is None:
             label_lookup = {}
 
@@ -376,7 +380,7 @@ class Cluster:
         """
         df = self.df.copy()
         df["Cluster"] = self.get_cluster_labels()
-        df = df.melt("Cluster")[lambda df: ~(df["variable"] == " ")]
+        df = df.melt("Cluster").loc[lambda df: ~(df["variable"] == " ")]
         df["value"] = df["value"].astype(float)
         df = df[lambda df: (df["Cluster"] == cluster_label)]
 

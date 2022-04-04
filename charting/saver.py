@@ -1,10 +1,10 @@
 import base64
-from urllib.request import urlopen
-from selenium.common.exceptions import NoSuchElementException
-from typing import Any, Dict, IO, Iterable, Optional, Set, Type, Union
-from altair_saver.types import JSONDict, Mimebundle
-from altair_saver._utils import extract_format, infer_mode_from_spec
 from functools import partial
+from typing import IO, Any, Dict, Iterable, Optional, Set, Type, Union
+from urllib.request import urlopen
+
+import altair as alt
+from altair_saver._utils import extract_format, infer_mode_from_spec
 from altair_saver.savers._selenium import (
     CDN_URL,
     EXTRACT_CODE,
@@ -14,8 +14,8 @@ from altair_saver.savers._selenium import (
     SeleniumSaver,
     get_bundled_script,
 )
-
-import altair as alt
+from altair_saver.types import JSONDict, Mimebundle
+from selenium.common.exceptions import NoSuchElementException
 
 
 def get_as_base64(url):
@@ -146,6 +146,7 @@ WebFont.load({
 
 """
 
+
 class MSSaver(SeleniumSaver):
 
     logo_url = (
@@ -179,7 +180,7 @@ class MSSaver(SeleniumSaver):
         return self._logo
 
     def _extract(self, fmt: str) -> MimebundleContent:
-        driver = self._registry.get(self._webdriver, self._driver_timeout)
+        driver = self._registry.get(self._webdriver, self._driver_timeout)  # type: ignore
 
         if self._offline:
             js_resources = {

@@ -1,8 +1,11 @@
-from typing import List
-from urllib.request import urlopen
-import altair as alt
-from .chart import Chart, LayerChart
 import json
+from typing import List, Tuple, Union
+from urllib.request import urlopen
+
+import altair as alt
+import pandas as pd
+
+from .chart import Chart, LayerChart
 
 
 def get_chart_spec_from_url(url: str) -> List[str]:
@@ -44,7 +47,9 @@ def json_to_chart(json_spec: str) -> alt.Chart:
     return chart
 
 
-def get_chart_from_url(url: str, n: int = 0, include_df: bool = False) -> alt.Chart:
+def get_chart_from_url(
+    url: str, n: int = 0, include_df: bool = False
+) -> Union[alt.Chart, Tuple[alt.Chart, pd.DataFrame]]:
     """
     given url, a number (0 indexed), get the spec,
     and reduce an altair chart instance.
