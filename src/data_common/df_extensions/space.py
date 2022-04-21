@@ -12,7 +12,7 @@ import seaborn as sns
 from IPython.display import HTML, display
 from ipywidgets import fixed, interact, interact_manual, interactive
 from matplotlib.colors import Colormap
-from notebook_helper.charting.theme import mysoc_palette_colors
+from data_common.charting.theme import mysoc_palette_colors
 from scipy.spatial.distance import pdist, squareform
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score

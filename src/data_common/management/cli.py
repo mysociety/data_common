@@ -1,5 +1,5 @@
 import click
-from notebook_helper.management.render_processing import DocumentCollection
+from data_common.management.render_processing import DocumentCollection
 
 
 class DocCollection:

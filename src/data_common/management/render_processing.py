@@ -207,7 +207,7 @@ class Document:
         # convert to docx
         input_path_html = self.rendered_filename(".html")
         output_path_doc = self.rendered_filename(".docx")
-        template = Path("notebook_helper", "resources", "reference.docx")
+        template = Path("src", "data_common", "src", "data_commonr", "resources", "reference.docx")
         if template.exists() is False:
             raise ValueError("Missing Template")
         reference_doc = str(template)

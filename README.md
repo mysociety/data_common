@@ -1,4 +1,4 @@
-# notebook_helper
+# data_common
 
 Tools to tidy up jupyter notebook use.
 Includes default mysociety theme for altair charts and helper functions to render to markdown readmes.
@@ -8,7 +8,8 @@ To use the altair chart with support for our fonts + logo, use `Chart` rather th
 In cell code at top include:
 
 ```
-from notebook_helper import *
+from data_common.notebook import *
+
 ```
 
 and if wanted to automatically render, add this cell code to bottom:

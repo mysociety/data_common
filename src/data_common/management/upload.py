@@ -1,4 +1,4 @@
-from notebook_helper.apis.google_api import (
+from data_common.apis.google_api import (
     DriveIntegration,
     ScriptIntergration,
     test_settings,
