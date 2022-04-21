@@ -1,9 +1,8 @@
 import pandas as pd
-from pandas import api
 
 
-@api.extensions.register_series_accessor("common")
-class CommonSeriesAccessor(object):
+@pd.api.extensions.register_series_accessor("common")
+class CommonAccessor(object):
     """
     extention to pandas dataframe
     """
@@ -15,8 +14,8 @@ class CommonSeriesAccessor(object):
         return self._obj.apply(lambda x: map.get(x, x))
 
 
-@api.extensions.register_dataframe_accessor("common")
-class CommonDataFrameAccessor(object):
+@pd.api.extensions.register_dataframe_accessor("common")
+class CommonAccessor(object):
     """
     extention to pandas dataframe
     """

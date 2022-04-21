@@ -1,10 +1,10 @@
 import base64
-from functools import partial
-from typing import IO, Any, Dict, Iterable, Optional, Set, Type, Union
 from urllib.request import urlopen
-
-import altair as alt
+from selenium.common.exceptions import NoSuchElementException
+from typing import Any, Dict, IO, Iterable, Optional, Set, Type, Union
+from altair_saver.types import JSONDict, Mimebundle
 from altair_saver._utils import extract_format, infer_mode_from_spec
+from functools import partial
 from altair_saver.savers._selenium import (
     CDN_URL,
     EXTRACT_CODE,
@@ -14,8 +14,8 @@ from altair_saver.savers._selenium import (
     SeleniumSaver,
     get_bundled_script,
 )
-from altair_saver.types import JSONDict, Mimebundle
-from selenium.common.exceptions import NoSuchElementException
+
+import altair as alt
 
 
 def get_as_base64(url):
@@ -158,16 +158,6 @@ class MSSaver(SeleniumSaver):
         super().__init__(*args, **kwargs)
         self._logo = None
 
-    @classmethod
-    def reset_driver(cls):
-        """
-        This function resets the chrome driver powering the saver.
-        Can clear errors.
-        """
-        if "chrome" in cls._registry.drivers:
-            driver = cls._registry.drivers.pop("chrome")
-            driver.quit()
-
     def _get_font(self):
         return self.__class__.font
 
@@ -180,7 +170,7 @@ class MSSaver(SeleniumSaver):
         return self._logo
 
     def _extract(self, fmt: str) -> MimebundleContent:
-        driver = self._registry.get(self._webdriver, self._driver_timeout)  # type: ignore
+        driver = self._registry.get(self._webdriver, self._driver_timeout)
 
         if self._offline:
             js_resources = {

@@ -23,7 +23,6 @@ from .charting import (
     altair_theme,
     enable_sw_charts,
     ChartTitle,
-    reset_renderer,
 )
 from .df_extensions import common, space, viz
 from .helpers.pipe import Pipe, Pipeline, iter_format
@@ -55,7 +54,7 @@ def page_break():
 
 
 def notebook_setup():
-    reset_renderer()
+    pass
 
 
 def Date(x):
