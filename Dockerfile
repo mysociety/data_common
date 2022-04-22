@@ -11,6 +11,6 @@ RUN cd /setup/ \
 
 # copy across just the poetry file so changes elsewhere don't disturb the build
 COPY pyproject.toml poetry.lock /setup/ 
-RUN mkdir /setup/src/data_common && touch /setup/src/data_common/__init__.py \
+RUN mkdir --parents /setup/src/data_common && touch /setup/src/data_common/__init__.py \
     && export PATH="$HOME/.poetry/bin:$PATH" \
     && cd /setup/ && poetry install 
