@@ -2,9 +2,10 @@ from ruamel import yaml
 import os
 from pathlib import Path
 import json
+import toml
 
 
-def get_settings(yaml_file: str = "settings.yaml", env_file: str = ".env"):
+def get_settings(toml_file: str = "pyproject.toml", env_file: str = ".env"):
     """
     populate a settings dictionary from 'settings.yaml'
     is "$$ENV$$" is the value, first try and get it from the env
@@ -13,15 +14,15 @@ def get_settings(yaml_file: str = "settings.yaml", env_file: str = ".env"):
 
     top_level = []
     attempt = 0
-    while Path(*top_level, yaml_file).exists() is False and attempt < 10:
+    while Path(*top_level, toml_file).exists() is False and attempt < 10:
         top_level.append("..")
         attempt += 1
-    if Path(*top_level, yaml_file).exists() is False:
+    if Path(*top_level, toml_file).exists() is False:
         return {}
 
-    settings_file = Path(*top_level, yaml_file)
-    with open(settings_file, "r") as fp:
-        data = yaml.load(fp, Loader=yaml.Loader)
+    settings_file = Path(*top_level, toml_file)
+
+    data = toml.load(settings_file)["notebook"]["settings"]
 
     env_data = {}
     if env_file and Path(*top_level, env_file).exists():
