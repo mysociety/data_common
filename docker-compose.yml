@@ -1,0 +1,12 @@
+services:
+  app:
+    image: mysociety/data_common:${TAG:-latest}
+    build:
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+       - ghcr.io/mysociety/data_common:latest
+    volumes:
+      - ./:/workspaces/template_data_repo/
