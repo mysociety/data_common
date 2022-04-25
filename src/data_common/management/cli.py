@@ -49,6 +49,7 @@ def render(slug="", param=[], group="", render_all=False, publish=False):
 
 @cli.command()
 @click.argument("slug", default="")
+@click.option("-p", "--param", nargs=2, multiple=True)
 @click.option("--all/--not-all", "render_all", default=False)
 def upload(slug="", param=[], render_all=False):
     params = {x: y for x, y in param}
@@ -64,4 +65,4 @@ def upload(slug="", param=[], render_all=False):
         print(params)
 
     for doc in docs:
-        doc.upload()
+        doc.upload(params)
