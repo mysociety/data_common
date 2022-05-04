@@ -59,6 +59,10 @@ apt install gh
 gh extension install ajparsons/gh-fix-submodule-remote
 echo "gh extention installed"
 
+# get node and pyright
+apt install nodejs yarn -y
+npm install -g pyright
+
 # download ltex
 cd /tmp/
 echo "Downloading ltex"
