@@ -158,6 +158,16 @@ class MSSaver(SeleniumSaver):
         super().__init__(*args, **kwargs)
         self._logo = None
 
+    @classmethod
+    def reset_driver(cls):
+        """
+        This function resets the chrome driver powering the saver.
+        Can clear errors.
+        """
+        if "chrome" in cls._registry.drivers:
+            driver = cls._registry.drivers.pop("chrome")
+            driver.quit()
+
     def _get_font(self):
         return self.__class__.font
 

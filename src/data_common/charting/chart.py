@@ -1,6 +1,6 @@
 from functools import wraps
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Union, TYPE_CHECKING
 
 import altair as alt
 import pandas as pd
@@ -78,7 +78,13 @@ class ChartTitle(alt.TitleParams):
         super().__init__(**kwargs)
 
 
-class MSDisplayMixIn:
+if TYPE_CHECKING:
+    _base = alt.Chart
+else:
+    _base = object
+
+
+class MSDisplayMixIn(_base):
     """
     mix in that enables a bit more customisation
     of extra display options in the renderer
@@ -133,17 +139,23 @@ class MSDisplayMixIn:
     def raw_properties(self, *args, **kwargs):
         return super().properties(*args, **kwargs)
 
+    def big_labels(self) -> "Chart":
+        """
+        quick helper function to add a bigger label limit
+        """
+        return self.configure_axis(labelLimit=1000)
+
     def properties(
         self,
-        title: Optional[Union[str, list, alt.TitleParams, ChartTitle]] = "",
-        title_line_limit: Optional[int] = 60,
+        title: Union[str, list, alt.TitleParams, ChartTitle] = "",
+        title_line_limit: int = 60,
         subtitle: Optional[Union[str, list]] = None,
         width: Optional[int] = None,
         height: Optional[int] = None,
-        aspect: Optional[tuple] = (16, 9),
+        aspect: tuple = (16, 9),
         logo: bool = False,
-        caption: Optional[str] = "",
-        scale_factor: Optional[str] = None,
+        caption: str = "",
+        scale_factor: Optional[int] = None,
         **kwargs
     ) -> "Chart":
 
@@ -154,7 +166,7 @@ class MSDisplayMixIn:
 
         if isinstance(title, str) or isinstance(title, list) or subtitle is not None:
             args["title"] = ChartTitle(
-                title=title, subtitle=subtitle, line_limit=title_line_limit
+                title=str(title), subtitle=subtitle, line_limit=title_line_limit
             )
 
         if width and not height:
@@ -184,13 +196,16 @@ class MSDisplayMixIn:
         return super().properties(**kwargs).display_options(**display_args)
 
 
-class MSDataManagementMixIn:
+class MSDataManagementMixIn(_base):
     """
     Mixin to manage downloading charts
     from the explorer minisites and making it
     slightly easier to edit the data with pandas
 
     """
+
+    if TYPE_CHECKING:
+        data = {}
 
     @classmethod
     def from_url(cls, url, n=0):
@@ -215,11 +230,11 @@ class MSDataManagementMixIn:
         """
         return self._get_df()
 
-    def __setattribute__(self, key, value):
+    def __setattr__(self, key, value):
         if key == "df":
             self.update_df(value)
         else:
-            super().__setattribute__(key, value)
+            super().__setattr__(key, value)
 
 
 class MSAltair(MSDisplayMixIn, MSDataManagementMixIn):
