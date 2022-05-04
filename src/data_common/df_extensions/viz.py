@@ -6,11 +6,12 @@ import seaborn as sns
 import matplotlib.collections as clt
 import matplotlib.pyplot as plt
 
+import pandas.api as pd_api
 
 sns.set(style="whitegrid", font_scale=1, font="Source Sans Pro")
 
 
-@pd.api.extensions.register_series_accessor("viz")
+@pd_api.extensions.register_series_accessor("viz")
 class VIZSeriesAccessor:
     def __init__(self, pandas_obj):
         self._obj = pandas_obj
@@ -18,9 +19,9 @@ class VIZSeriesAccessor:
     def raincloud(
         self,
         groups: Optional[pd.Series] = None,
-        ort: Optional[str] = "h",
-        pal: Optional[str] = "Set2",
-        sigma: Optional[float] = 0.2,
+        ort: str = "h",
+        pal: str = "Set2",
+        sigma: float = 0.2,
         title: str = "",
         all_data_label: str = "All data",
         x_label: Optional[str] = None,
@@ -37,7 +38,7 @@ class VIZSeriesAccessor:
 
         if groups is not None:
             df[groups.name] = groups
-            x_col = groups.name
+            x_col = str(groups.name)
         else:
             df[" "] = all_data_label
             x_col = " "
@@ -62,7 +63,7 @@ class VIZSeriesAccessor:
         plt.show()
 
 
-@pd.api.extensions.register_dataframe_accessor("viz")
+@pd_api.extensions.register_dataframe_accessor("viz")
 class VIZDFAccessor:
     def __init__(self, pandas_obj):
         self._obj = pandas_obj
@@ -73,10 +74,10 @@ class VIZDFAccessor:
         groups: Optional[str] = None,
         one_value: Optional[str] = None,
         limit: Optional[List[str]] = None,
-        ort: Optional[str] = "h",
-        pal: Optional[str] = "Set2",
-        sigma: Optional[float] = 0.2,
-        title: Optional[str] = "",
+        ort: str = "h",
+        pal: str = "Set2",
+        sigma: float = 0.2,
+        title: str = "",
         all_data_label: str = "All data",
         x_label: Optional[str] = None,
         y_label: Optional[str] = None,

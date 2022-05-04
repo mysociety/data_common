@@ -65,7 +65,7 @@ class ScriptIntergration:
         return inner
 
 
-def trigger_log_in_flow(settings):
+def trigger_log_in_flow(settings: dict):
 
     # If there are no (valid) credentials available, let the user log in.
     data = settings["GOOGLE_APP_JSON"]

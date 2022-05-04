@@ -83,6 +83,13 @@ def check_string_in_source(instr, item):
     return False
 
 
+def to_config(value) -> Config:
+    if isinstance(value, Config):
+        return value
+    else:
+        raise TypeError("Not a valid config (Lazy or none)")
+
+
 class MarkdownRenderer(object):
     self_reference = "render_to_markdown"
     exporter_class = MarkdownExporter
@@ -142,6 +149,8 @@ class MarkdownRenderer(object):
 
         pre_processors += [CustomExtractOutputPreprocessor, RemoveOnContent]
 
+        c.MarkdownExporter = to_config(c.MarkdownExporter)
+
         c.MarkdownExporter.preprocessors = pre_processors
         c.MarkdownExporter.filters = {"indent": indent}
         c.MarkdownExporter.exclude_input = not self.include_input
@@ -163,7 +172,7 @@ class MarkdownRenderer(object):
 
         if output_file is None:
             output_file = Path(
-                os.path.splitext(input_file)[0] + self.__class__.default_ext
+                str(os.path.splitext(input_file)[0]) + self.__class__.default_ext
             )
 
         output_base_path = Path(output_file).parent
@@ -244,6 +253,8 @@ class HTML_Renderer(MarkdownRenderer):
             ]
 
         pre_processors += [CustomExtractOutputPreprocessor, RemoveOnContent]
+
+        c.HTMLExporter = to_config(c.HTMLExporter)
 
         c.HTMLExporter.preprocessors = pre_processors
 

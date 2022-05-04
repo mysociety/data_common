@@ -4,6 +4,7 @@ functions to speed up and pretify notebooks
 
 import builtins as __builtin__
 import datetime
+import os
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -19,13 +20,14 @@ from IPython.display import Markdown as md
 from .charting import (
     Chart,
     ChartEncoding,
+    ChartTitle,
     altair_sw_theme,
     altair_theme,
     enable_sw_charts,
-    ChartTitle,
+    reset_renderer,
 )
 from .df_extensions import common, space, viz
-from .helpers.pipe import Pipe, Pipeline, iter_format
+from .helpers.pipe import iter_format
 from .management.exporters import render_to_html, render_to_markdown
 from .management.settings import settings
 from .progress import Progress, track_progress
@@ -53,8 +55,12 @@ def page_break():
     )
 
 
+while "notebooks" in Path.cwd().parts:
+    os.chdir("..")
+
+
 def notebook_setup():
-    pass
+    reset_renderer()
 
 
 def Date(x):
@@ -70,8 +76,8 @@ def slugify(value):
     value = (
         unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
     )
-    value = re.sub("[^\w\s-]", "", value).strip().lower()
-    return re.sub("[-\s]+", "-", value)
+    value = re.sub(r"[^\w\s-]", "", value).strip().lower()
+    return re.sub(r"[-\s]+", "-", value)
 
 
 comma_thousands = "{:,}".format

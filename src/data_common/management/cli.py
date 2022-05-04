@@ -27,6 +27,10 @@ def cli():
 @click.option("--publish/--no-publish", default=False)
 def render(slug="", param=[], group="", render_all=False, publish=False):
     params = {x: y for x, y in param}
+
+    if dc.collection is None:
+        raise ValueError("Doc collection not set")
+
     if slug:
         docs = [dc.collection.get(slug)]
     elif render_all:
@@ -52,6 +56,10 @@ def render(slug="", param=[], group="", render_all=False, publish=False):
 @click.option("--all/--not-all", "render_all", default=False)
 def upload(slug="", param=[], render_all=False):
     params = {x: y for x, y in param}
+
+    if dc.collection is None:
+        raise ValueError("Doc collection not set")
+
     if slug:
         docs = [dc.collection.get(slug)]
     elif render_all:

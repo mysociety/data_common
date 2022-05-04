@@ -8,11 +8,11 @@ console = get_console()
 
 def track_progress(
     iterable: Iterable,
-    name: Optional[str] = None,
+    name: str = "",
     total: Optional[int] = None,
     update_label: bool = False,
-    label_func: Optional[Callable] = lambda x: x,
-    clear: Optional[bool] = True,
+    label_func: Callable = lambda x: x,
+    clear: bool = True,
 ):
     """
     simple tracking loop using rich progress
@@ -20,7 +20,7 @@ def track_progress(
     if name is None:
         name = ""
     if total is None:
-        total = len(iterable)
+        total = len(list(iterable))
     console.clear_live()
     with Progress(console=console, transient=clear) as progress:
         task = progress.add_task(name, total=total)

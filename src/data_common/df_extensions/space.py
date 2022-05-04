@@ -16,7 +16,8 @@ from data_common.charting.theme import mysoc_palette_colors
 from scipy.spatial.distance import pdist, squareform
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
-
+from numpy.typing import ArrayLike
+import pandas.api as pd_api
 
 from . import viz
 
@@ -49,8 +50,8 @@ class Cluster:
         cols: Optional[List[str]] = None,
         label_cols: Optional[List[str]] = None,
         normalize: bool = True,
-        transform: List[Callable] = None,
-        k: Optional[int] = 2,
+        transform: Optional[Dict[str, Callable]] = None,
+        k: int = 2,
     ):
         """
         Initalised with a dataframe, an id column in that dataframe,
@@ -80,7 +81,7 @@ class Cluster:
             id_col = df.index.name
 
         if label_cols:
-            df = df.drop(columns=label_cols)
+            df: pd.DataFrame = df.drop(columns=label_cols)  # type: ignore
         else:
             label_cols = []
 
@@ -95,9 +96,9 @@ class Cluster:
 
         if normalize:
             df = df.apply(fnormalize, axis=0)
-        if transform:
-            for k, v in transform.items():
-                df[k] = v(df[k])
+        if transform is not None:
+            for col, func in transform.items():
+                df[col] = func(df[col])
 
         self.df = df
         self.cols = cols
@@ -149,7 +150,7 @@ class Cluster:
         labels = pd.Series(self.get_clusters(self.k).labels_) + 1
         return labels
 
-    def get_cluster_labels(self, include_short=True) -> np.array:
+    def get_cluster_labels(self, include_short=True) -> ArrayLike:
 
         labels = pd.Series(self.get_clusters(self.k).labels_)
 
@@ -161,7 +162,7 @@ class Cluster:
 
     label_array = get_cluster_labels
 
-    def get_cluster_descs(self) -> np.array:
+    def get_cluster_descs(self) -> ArrayLike:
 
         labels = pd.Series(self.get_clusters(self.k).labels_)
         labels = labels.apply(lambda x: self.get_label_desc(n=x))
@@ -213,7 +214,7 @@ class Cluster:
         combos = list(combinations(vars, 2))
         rows = math.ceil(len(combos) / num_rows)
 
-        plt.rcParams["figure.figsize"] = (15, 5 * rows)
+        plt.rcParams["figure.figsize"] = (15, 5 * rows)  # type: ignore
 
         df["labels"] = self.get_cluster_labels()
 
@@ -223,7 +224,7 @@ class Cluster:
         chart_no = 0
 
         rgb_values = sns.color_palette("Set2", len(df["labels"].unique()))
-        color_map = dict(zip(df["labels"].unique(), rgb_values))
+        color_map = dict(zip(df["labels"].unique(), rgb_values))  # type: ignore
         fig = plt.figure()
 
         for x_var, y_var in combos:
@@ -255,7 +256,7 @@ class Cluster:
         }
 
         tool = interactive(
-            func,
+            func,  # type: ignore
             cluster=cluster_options,
             **analysis_options,
             show_legend=False,
@@ -283,7 +284,7 @@ class Cluster:
         High silhouette value good.
         Parameters are the search space.
         """
-        if start and not stop:
+        if stop is None:
             stop = start
             start = 2
 
@@ -295,7 +296,7 @@ class Cluster:
         df["sum_squares"] = df["k_means"].apply(lambda x: x.inertia_)
         df["silhouette"] = df["k_means"].apply(s_score)
 
-        plt.rcParams["figure.figsize"] = (10, 5)
+        plt.rcParams["figure.figsize"] = (10, 5)  # type: ignore
         plt.subplot(1, 2, 1)
         plt.plot(df["n"], df["sum_squares"], "bx-")
         plt.xlabel("k")
@@ -309,7 +310,7 @@ class Cluster:
         plt.title("Silhouette Method For Optimal k")
         plt.show()
 
-    def stats(self, label_lookup: Optional[dict] = None, all_members: bool = False):
+    def stats(self, label_lookup: dict = {}, all_members: bool = False):
         """
         Simple description of sample size
         """
@@ -376,9 +377,10 @@ class Cluster:
         """
         df = self.df.copy()
         df["Cluster"] = self.get_cluster_labels()
-        df = df.melt("Cluster")[lambda df: ~(df["variable"] == " ")]
+        df = df.melt("Cluster")
+        df = df.loc[lambda df: ~(df["variable"] == " ")]
         df["value"] = df["value"].astype(float)
-        df = df[lambda df: (df["Cluster"] == cluster_label)]
+        df = df.loc[lambda df: (df["Cluster"] == cluster_label)]
 
         df.viz.raincloud(
             values="value",
@@ -392,7 +394,7 @@ class Cluster:
         distribution of different variables
         """
         tool = interactive(
-            self.reverse_raincloud, cluster_label=self.get_label_options()
+            self.reverse_raincloud, cluster_label=self.get_label_options()  # type: ignore
         )
         display(tool)
 
@@ -421,7 +423,7 @@ class Cluster:
 
         comparison_options = ["all", "none"] + self.get_label_options()
         tool = interactive(
-            func,
+            func,  # type: ignore
             variable=self.cols,
             use_source_values=True,
             comparison=comparison_options,
@@ -447,7 +449,7 @@ class Cluster:
 
         sort_options = ["Index", "% of cluster", "% of label"]
         tool = interactive(
-            func,
+            func,  # type: ignore
             cluster=self.get_label_options(),
             sort=sort_options,
             include_data_labels=True,
@@ -521,16 +523,16 @@ class Cluster:
         df = self.df
 
         labels = self.get_cluster_labels()
-        combos = list(combinations(df.columns, 3))
+        combos = list(combinations([str(x) for x in df.columns], 3))
         if x_var:
             combos = [x for x in combos if x[0] == x_var]
         if y_var:
             combos = [x for x in combos if x[1] == y_var]
         if z_var:
-            combos = [x for x in combos if x[1] == y_var]
+            combos = [x for x in combos if x[2] == z_var]
         rows = math.ceil(len(combos) / 2)
 
-        plt.rcParams["figure.figsize"] = (20, 10 * rows)
+        plt.rcParams["figure.figsize"] = (20, 10 * rows)  # type: ignore
 
         chart_no = 0
         fig = plt.figure()
@@ -568,14 +570,14 @@ def join_distance(df_label_dict: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     return df
 
 
-@pd.api.extensions.register_dataframe_accessor("space")
+@pd_api.extensions.register_dataframe_accessor("space")
 class SpacePDAccessor(object):
     """
     extention to pandas dataframe
     """
 
     def __init__(self, pandas_obj):
-        self._obj = pandas_obj
+        self._obj: pd.DataFrame = pandas_obj
 
     def cluster(
         self,
@@ -583,8 +585,8 @@ class SpacePDAccessor(object):
         cols: Optional[List[str]] = None,
         label_cols: Optional[List[str]] = None,
         normalize: bool = True,
-        transform: List[Callable] = None,
-        k: Optional[int] = None,
+        transform: Optional[Dict[str, Callable]] = None,
+        k: int = 2,
     ) -> Cluster:
         """
         returns a Cluster helper object for this dataframe
@@ -604,7 +606,7 @@ class SpacePDAccessor(object):
         id_col: Optional[str] = None,
         cols: Optional[List] = None,
         normalize: bool = False,
-        transform: List[callable] = None,
+        transform: Optional[Dict[str, Callable]] = None,
     ):
         """
         Calculate the distance between all objects in a dataframe
@@ -621,7 +623,7 @@ class SpacePDAccessor(object):
         source_df = self._obj
 
         if id_col == None:
-            id_col = source_df.index.name
+            id_col = str(source_df.index.name)
             source_df = source_df.reset_index()
 
         if id_col not in source_df.columns:
@@ -641,7 +643,7 @@ class SpacePDAccessor(object):
         if normalize:
             grid = grid.apply(fnormalize, axis=0)
 
-        if transform:
+        if transform is not None:
             for k, v in transform.items():
                 grid[k] = v(grid[k])
 
@@ -654,8 +656,8 @@ class SpacePDAccessor(object):
     def join_distance(
         self,
         other: Union[Dict[str, pd.DataFrame], pd.DataFrame],
-        our_label: Optional[str] = "A",
-        their_label: Optional[str] = "B",
+        our_label: str = "A",
+        their_label: str = "B",
     ):
         """
         Either merges self and other
@@ -690,7 +692,7 @@ class SpacePDAccessor(object):
             return df
 
         return (
-            df.groupby(df.columns[0], as_index=False)
+            df.groupby(str(df.columns[0]), as_index=False)
             .apply(standardise_distance)
             .reset_index(drop=True)
         )
@@ -706,13 +708,13 @@ class SpacePDAccessor(object):
             return df
 
         return (
-            df.groupby(df.columns[0], as_index=False)
+            df.groupby(str(df.columns[0]), as_index=False)
             .apply(get_position)
             .reset_index(drop=True)
         )
 
 
-@pd.api.extensions.register_dataframe_accessor("joint_space")
+@pd_api.extensions.register_dataframe_accessor("joint_space")
 class JointSpacePDAccessor(object):
     """
     handles dataframes that have joined several distance calculations
@@ -793,5 +795,5 @@ class JointSpacePDAccessor(object):
         df = self._obj
         if sample:
             df = df.sample(sample)
-        plt.rcParams["figure.figsize"] = (10, 5)
+        plt.rcParams["figure.figsize"] = (10, 5)  # type: ignore
         df.plot(x=df.columns[2], y=df.columns[3], kind=kind, title=title, **kwargs)

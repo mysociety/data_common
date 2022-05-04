@@ -207,7 +207,9 @@ class Document:
         # convert to docx
         input_path_html = self.rendered_filename(".html")
         output_path_doc = self.rendered_filename(".docx")
-        template = Path("src", "data_common", "src", "data_commonr", "resources", "reference.docx")
+        template = Path(
+            "src", "data_common", "src", "data_common", "resources", "reference.docx"
+        )
         if template.exists() is False:
             raise ValueError("Missing Template")
         reference_doc = str(template)
@@ -241,7 +243,7 @@ class DocumentCollection:
     """
 
     @classmethod
-    def from_yaml(cls, yaml_file: Path):
+    def from_yaml(cls, yaml_file: Path | str):
         with open(yaml_file) as stream:
             data = yaml.safe_load(stream)
         return cls(data)
