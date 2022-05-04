@@ -20,7 +20,7 @@ apt-get -qq update \
             google-chrome-stable \
       && rm -rf /var/lib/apt/lists/*
 
-
+# get chromedriver
 VERSION=$( curl -s https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$( google-chrome --version | awk '{print $NF}' | cut -d. -f1,2,3 ) )
 wget -q https://chromedriver.storage.googleapis.com/${VERSION}/chromedriver_linux64.zip
 unzip chromedriver_linux64.zip
@@ -32,6 +32,7 @@ rm -f chromedriver_linux64.zip
 apt-get update -y
 apt-get install pandoc -y
 
+# getfonts
 mkdir /tmp/adodefont
 cd /tmp/adodefont
 mkdir -p ~/.fonts
@@ -50,6 +51,15 @@ cp source-sans-2.020R-ro-1.075R-it/OTF/*.otf ~/.fonts/
 
 fc-cache -f -v
 
+# add gh cli
+curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+apt update
+apt install gh
+gh extension install ajparsons/gh-fix-submodule-remote
+echo "gh extention installed"
+
+# download ltex
 cd /tmp/
 echo "Downloading ltex"
 wget https://github.com/valentjn/ltex-ls/releases/download/15.2.0/ltex-ls-15.2.0-linux-x64.tar.gz
@@ -59,3 +69,4 @@ tar -xf ltex-ls-15.2.0-linux-x64.tar.gz -C /ltex
 echo "Removing source"
 rm ltex-ls-15.2.0-linux-x64.tar.gz
 echo "Finished ltex download"
+
