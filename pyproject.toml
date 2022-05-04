@@ -35,7 +35,7 @@ black = {version = "21.12b0", extras = ["jupyter"]}
 jupyterlab = "3.2.6"
 jupyterlab-link-share = "0.2.4"
 scipy = "1.8.0"
-pyright = "1.1"
+pyright = "1.1.244"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
