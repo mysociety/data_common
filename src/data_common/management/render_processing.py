@@ -223,10 +223,14 @@ class Document:
             ],
         )
 
-    def upload(self):
+    def upload(self, context: Optional[dict] = None):
         """
         Upload result to service (gdrive currently)
         """
+
+        if context:
+            self.init_rendered_values(context)
+
         for k, v in self._data["upload"].items():
             if k == "gdrive":
                 file_name = self._rendered_data["title"]
