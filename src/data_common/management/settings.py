@@ -1,18 +1,21 @@
-from ruamel import yaml
+from ruamel import yaml  # type: ignore
 import os
 from pathlib import Path
 import json
 import toml
+from typing import Any
 
 
-def get_settings(toml_file: str = "pyproject.toml", env_file: str = ".env"):
+def get_settings(
+    toml_file: str = "pyproject.toml", env_file: str = ".env"
+) -> dict[str, Any]:
     """
     populate a settings dictionary from 'settings.yaml'
     is "$$ENV$$" is the value, first try and get it from the env
     Then will try directly from the '.env' file.
     """
 
-    top_level = []
+    top_level: list[str] = []
     attempt = 0
     while Path(*top_level, toml_file).exists() is False and attempt < 10:
         top_level.append("..")

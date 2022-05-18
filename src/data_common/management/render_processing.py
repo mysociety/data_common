@@ -1,15 +1,16 @@
+from __future__ import annotations
 import json
 import shutil
 from copy import deepcopy
 from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Any, Type
 
-import papermill as pm
-import pypandoc
+import papermill as pm  # type: ignore
+import pypandoc  # type: ignore
 from jinja2 import Template
-from ruamel import yaml
+from ruamel import yaml  # type: ignore
 
 from . import exporters as exporters
 from .upload import g_drive_upload_and_format
@@ -39,12 +40,12 @@ def add_tag_based_on_content(input_file: Path, tag: str, content: str):
             json.dump(nb, f)
 
 
-def render(txt: str, context: dict):
+def render(txt: str, context: dict[str, Any]):
     t = Template(str(txt))
     return t.render(**context)
 
 
-def combine_outputs(parts, output_path):
+def combine_outputs(parts: list[Path], output_path: Path):
     text_parts = [open(p, "r").read() for p in parts]
     result = "\n".join(text_parts)
     result = result.replace("<title>Notebook</title>", "")
@@ -74,7 +75,7 @@ class Notebook:
             papermill_dir.mkdir()
         return Path("_render", "_papermills", slug + "_" + self.filename)
 
-    def papermill(self, slug, params, rerun: bool = True):
+    def papermill(self, slug: str, params: dict[str, Any], rerun: bool = True):
         """
         execute the notebook with the parameters
         to the papermill storage folder
@@ -86,7 +87,7 @@ class Notebook:
             shutil.copy(self.raw_path(), self.papermill_path(slug))
         else:
             add_tag_based_on_content(actual_path, "parameters", "#default-params")
-            pm.execute_notebook(
+            pm.execute_notebook(  # type: ignore
                 actual_path, self.papermill_path(slug), parameters=params
             )
 
@@ -106,13 +107,13 @@ class Notebook:
         """
         include_input = not hide_input
         input_path = self.papermill_path(slug)
-        exporters.render_to_markdown(
+        exporters.render_to_markdown(  # type: ignore
             input_path,
             self.rendered_filename(slug, ".md"),
             clear_and_execute=False,
             include_input=include_input,
         )
-        exporters.render_to_html(
+        exporters.render_to_html(  # type: ignore
             input_path,
             self.rendered_filename(slug, ".html"),
             clear_and_execute=False,
@@ -125,7 +126,9 @@ class Document:
     Get details for a single final document (made up of several notebooks)
     """
 
-    def __init__(self, name: str, data: dict, context: Optional[dict] = None):
+    def __init__(
+        self, name: str, data: dict[str, Any], context: Optional[dict[str, Any]] = None
+    ):
         if context is None:
             context = {}
         self.name = name
@@ -135,7 +138,7 @@ class Document:
         self.notebooks = [Notebook(x, _parent=self) for x in self._data["notebooks"]]
         self.init_rendered_values(context)
 
-    def init_rendered_values(self, context):
+    def init_rendered_values(self, context: dict[str, Any]):
         """
         for values that are going to be populated by jinja
         this will populate/repopulate based on the currently known context
@@ -157,22 +160,22 @@ class Document:
     def get(self, value: str):
         return self._data.get(value)
 
-    def get_rendered_parameters(self, context) -> dict:
+    def get_rendered_parameters(self, context: dict[str, Any]) -> dict[str, str]:
         """
         render properties using jinga
         """
         raw_params = self._data.get("parameters", {})
-        final_params = {}
+        final_params: dict[str, str] = {}
         for k, v in raw_params.items():
             nv = context.get(k, render(v, context))
             final_params[k] = nv
             context[k] = nv
         return final_params
 
-    def rendered_filename(self, ext) -> Path:
+    def rendered_filename(self, ext: str) -> Path:
         return Path("_render", self.name, self.slug, self.slug + ext)
 
-    def render(self, context: Optional[dict] = None):
+    def render(self, context: Optional[dict[str, Any]] = None):
         """
         render the the file through the respective papermills
         """
@@ -182,8 +185,6 @@ class Document:
 
         if context:
             self.init_rendered_values(context)
-
-        slug = self.slug
 
         render_dir = Path("_render", self.name, self.slug)
         if render_dir.exists() is False:
@@ -213,7 +214,7 @@ class Document:
         if template.exists() is False:
             raise ValueError("Missing Template")
         reference_doc = str(template)
-        pypandoc.convert_file(
+        pypandoc.convert_file(  # type: ignore
             str(input_path_html),
             "docx",
             outputfile=str(output_path_doc),
@@ -223,7 +224,7 @@ class Document:
             ],
         )
 
-    def upload(self, context: Optional[dict] = None):
+    def upload(self, context: Optional[dict[str, Any]] = None):
         """
         Upload result to service (gdrive currently)
         """
@@ -247,12 +248,15 @@ class DocumentCollection:
     """
 
     @classmethod
-    def from_yaml(cls, yaml_file: Path | str):
+    def from_yaml(
+        cls: Type[DocumentCollection], yaml_file: Path | str
+    ) -> DocumentCollection:
         with open(yaml_file) as stream:
-            data = yaml.safe_load(stream)
+            data: dict[str, Any]
+            data = yaml.safe_load(stream)  # type: ignore
         return cls(data)
 
-    def __init__(self, data: dict):
+    def __init__(self, data: dict[str, Any]):
 
         for k, v in data.items():
             if "meta" not in v:
@@ -271,12 +275,12 @@ class DocumentCollection:
 
         self.docs = {name: Document(name, data) for name, data in data.items()}
 
-    def all(self) -> Iterable:
+    def all(self) -> Iterable[Any]:
         for d in self.docs.values():
-            if d._data["meta"] is False:
+            if d._data["meta"] is False:  # type: ignore
                 yield d
 
-    def get_group(self, group: str) -> Iterable:
+    def get_group(self, group: str) -> Iterable[Any]:
         for d in self.all():
             if d._data["group"] == group:
                 yield d

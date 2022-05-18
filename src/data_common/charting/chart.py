@@ -1,10 +1,13 @@
+from __future__ import annotations
 from functools import wraps
 from pathlib import Path
-from typing import List, Optional, Union, TYPE_CHECKING
+from this import d
+from typing import List, Optional, Union, TYPE_CHECKING, Any, Protocol
+from unittest.mock import ANY
 
-import altair as alt
+import altair as alt  # type: ignore
 import pandas as pd
-from altair_saver import save as altair_save_chart
+from altair_saver import save as altair_save_chart  # type: ignore
 
 from .saver import MSSaver
 
@@ -13,7 +16,9 @@ class Renderer:
     default_renderer = MSSaver
 
 
-def save_chart(chart, filename, scale_factor=1, **kwargs):
+def save_chart(
+    chart: alt.Chart, filename: str | Path, scale_factor: int = 1, **kwargs: Any
+):
     """
     dumbed down version of altair save function that just assumes
     we're sending extra properties to the embed options
@@ -38,8 +43,8 @@ def split_text_to_line(text: str, cut_off: int = 60) -> List[str]:
     Split a string to meet line limit
     """
     bits = text.split(" ")
-    rows = []
-    current_item = []
+    rows: list[str] = []
+    current_item: list[str] = []
     for b in bits:
         if len(" ".join(current_item + [b])) > cut_off:
             rows.append(" ".join(current_item))
@@ -60,7 +65,7 @@ class ChartTitle(alt.TitleParams):
         title: Union[str, List[str]],
         subtitle: Optional[Union[str, List[str]]] = None,
         line_limit: int = 60,
-        **kwargs
+        **kwargs: Any
     ):
 
         if isinstance(title, str):
@@ -75,7 +80,7 @@ class ChartTitle(alt.TitleParams):
         if subtitle:
             kwargs["subtitle"] = subtitle
 
-        super().__init__(**kwargs)
+        super().__init__(**kwargs)  # type: ignore
 
 
 if TYPE_CHECKING:
@@ -109,7 +114,7 @@ class MSDisplayMixIn(_base):
         kwargs.update(self._display_options)
         super().display(*args, **kwargs)
 
-    def save(self, *args, **kwargs):
+    def save(self: _base, *args, **kwargs):
         kwargs.update(self._display_options)
         save_chart(self, *args, **kwargs)
 
@@ -272,8 +277,8 @@ def vconcat(*charts, **kwargs):
     return VConcatChart(vconcat=charts, **kwargs)
 
 
-@wraps(Chart.encode)
-def ChartEncoding(**kwargs):
+@wraps(Chart.encode)  # type: ignore
+def ChartEncoding(**kwargs: Any):
     """
     Thin wrapper to specify properties we want to use multiple times
     """

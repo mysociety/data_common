@@ -1,12 +1,13 @@
 import click
 from data_common.management.render_processing import DocumentCollection
+from typing import Optional, List
 
 
 class DocCollection:
     def __init__(self):
-        self.collection = None
+        self.collection: Optional[DocumentCollection] = None
 
-    def set_doc_collection(self, collection):
+    def set_doc_collection(self, collection: DocumentCollection):
         self.collection = collection
 
 
@@ -25,7 +26,13 @@ def cli():
 @click.option("-g", "--group", nargs=1)
 @click.option("--all/--not-all", "render_all", default=False)
 @click.option("--publish/--no-publish", default=False)
-def render(slug="", param=[], group="", render_all=False, publish=False):
+def render(
+    slug: str = "",
+    param: list[str] = [],
+    group: str = "",
+    render_all: bool = False,
+    publish: bool = False,
+):
     params = {x: y for x, y in param}
 
     if dc.collection is None:
