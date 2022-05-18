@@ -114,9 +114,10 @@ class MSDisplayMixIn(_base):
         kwargs.update(self._display_options)
         super().display(*args, **kwargs)
 
-    def save(self: _base, *args, **kwargs):
-        kwargs.update(self._display_options)
-        save_chart(self, *args, **kwargs)
+    def save(self, *args, **kwargs):
+        save_args = dict(self._display_options)
+        save_args.update(kwargs)
+        save_chart(self, *args, **save_args)
 
     def to_dict(self, *args, ignore: Optional[List] = None, **kwargs) -> dict:
         if ignore is None:
