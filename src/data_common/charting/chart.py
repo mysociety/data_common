@@ -1,8 +1,8 @@
 from __future__ import annotations
+
 from functools import wraps
 from pathlib import Path
-from this import d
-from typing import List, Optional, Union, TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, List, Optional, Protocol, Union
 from unittest.mock import ANY
 
 import altair as alt  # type: ignore
