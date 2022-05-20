@@ -1,41 +1,5 @@
-import numpy as np
-from datetime import time, date
-
-from matplotlib.axes import Axes as PlotAxes, SubplotBase as SubplotBase
 import sys
-from .base import IndexOpsMixin
-from .generic import NDFrame
-from .indexes.multi import MultiIndex
-from .indexing import _iLocIndexer, _LocIndexer
-from .frame import DataFrame
-from pandas.core.arrays.base import ExtensionArray
-from pandas.core.groupby.generic import SeriesGroupBy
-from pandas.core.indexes.base import Index
-from pandas.core.indexes.datetimes import DatetimeIndex
-from pandas.core.resample import Resampler
-from pandas.core.strings import StringMethods
-from pandas.core.window.rolling import Rolling, Window
-from pandas.core.window import ExponentialMovingWindow
-from pandas._typing import (
-    ArrayLike as ArrayLike,
-    Axis as Axis,
-    AxisType as AxisType,
-    Dtype as Dtype,
-    DtypeNp as DtypeNp,
-    FilePathOrBuffer as FilePathOrBuffer,
-    IgnoreRaise as IgnoreRaise,
-    Level as Level,
-    ListLike as ListLike,
-    MaskType as MaskType,
-    Renamer as Renamer,
-    S1 as S1,
-    Scalar as Scalar,
-    SeriesAxisType as SeriesAxisType,
-    Timestamp as Timestamp,
-    Timedelta as Timedelta,
-    num as num,
-    Label as Label,
-)
+from datetime import date, time
 from typing import (
     Any,
     Callable,
@@ -52,6 +16,42 @@ from typing import (
     Union,
     overload,
 )
+
+import numpy as np
+from matplotlib.axes import Axes as PlotAxes
+from matplotlib.axes import SubplotBase as SubplotBase
+from pandas._typing import S1 as S1
+from pandas._typing import ArrayLike as ArrayLike
+from pandas._typing import Axis as Axis
+from pandas._typing import AxisType as AxisType
+from pandas._typing import Dtype as Dtype
+from pandas._typing import DtypeNp as DtypeNp
+from pandas._typing import FilePathOrBuffer as FilePathOrBuffer
+from pandas._typing import IgnoreRaise as IgnoreRaise
+from pandas._typing import Label as Label
+from pandas._typing import Level as Level
+from pandas._typing import ListLike as ListLike
+from pandas._typing import MaskType as MaskType
+from pandas._typing import Renamer as Renamer
+from pandas._typing import Scalar as Scalar
+from pandas._typing import SeriesAxisType as SeriesAxisType
+from pandas._typing import Timedelta as Timedelta
+from pandas._typing import Timestamp as Timestamp
+from pandas._typing import num as num
+from pandas.core.arrays.base import ExtensionArray
+from pandas.core.groupby.generic import SeriesGroupBy
+from pandas.core.indexes.base import Index
+from pandas.core.indexes.datetimes import DatetimeIndex
+from pandas.core.resample import Resampler
+from pandas.core.strings import StringMethods
+from pandas.core.window import ExponentialMovingWindow
+from pandas.core.window.rolling import Rolling, Window
+
+from .base import IndexOpsMixin
+from .frame import DataFrame
+from .generic import NDFrame
+from .indexes.multi import MultiIndex
+from .indexing import _iLocIndexer, _LocIndexer
 
 if sys.version_info >= (3, 8):
     from typing import Literal
@@ -788,7 +788,7 @@ class Series(IndexOpsMixin, NDFrame, Generic[S1]):
     ) -> Series[S1]: ...
     def to_period(self, freq: Optional[_str] = ..., copy: _bool = ...) -> DataFrame: ...
     @property
-    def str(self) -> StringMethods[Series]: ...
+    def str(self) -> StringMethods[Series[Any]]: ...
     @property
     def dt(self) -> Series: ...
     cat = ...

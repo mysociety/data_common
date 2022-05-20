@@ -105,7 +105,7 @@ class _iLocIndexerFrame(_iLocIndexer):
             Tuple[IndexType, IndexType],
             Tuple[int, IndexType],
         ],
-        value: Union[float, Series, DataFrame],
+        value: Union[float, Series, DataFrame, str],
     ) -> None: ...
 
 class _LocIndexerFrame(_LocIndexer):
@@ -1123,7 +1123,7 @@ class DataFrame(NDFrame, OpsMixin):
     @columns.setter  # setter needs to be right next to getter; otherwise mypy complains
     def columns(self, cols: Union[List[_str], Index[_str]]) -> None: ...  # type:ignore
     @property
-    def dtypes(self) -> Series: ...
+    def dtypes(self) -> Series[Any]: ...
     @property
     def empty(self) -> _bool: ...
     @property
