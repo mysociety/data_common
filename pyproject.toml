@@ -23,8 +23,9 @@ jupyter = "1.0.0"
 pypandoc = "1.5"
 flake8 = "3.9.2"
 htmltabletomd = "1.0.0"
-rich = "10.6.0"
+rich = "12.4.1"
 click = "8.0.1"
+rich-click = "1.4"
 papermill = "2.3.3"
 google-api-python-client = "2.21.0"
 google-auth-httplib2 = "0.1.0"
@@ -35,6 +36,7 @@ black = {version = "21.12b0", extras = ["jupyter"]}
 jupyterlab = "3.2.6"
 jupyterlab-link-share = "0.2.4"
 scipy = "1.8.0"
+
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
