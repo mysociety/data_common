@@ -1,0 +1,9 @@
+{
+    "title": "Dataset title (can use caps and spaces)",
+    "slug": "{{ cookiecutter.title.lower().replace(' ', '_').replace('-', '_') }}",
+    "description": "A basic description of this dataset",
+    "license": [
+        "CC-BY-4.0",
+        "CC-BY-NC-4.0"
+    ]
+}

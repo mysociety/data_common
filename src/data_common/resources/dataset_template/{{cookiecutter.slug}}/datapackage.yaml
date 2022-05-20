@@ -1,0 +1,19 @@
+name: {{ cookiecutter.slug }}
+title: {{ cookiecutter.title }}
+description : |
+  {{ cookiecutter.description }}
+version: 0.1
+licenses:
+  {% if cookiecutter.license == "CC-BY-4.0" %}
+  - name: CC-BY-4.0
+    path: https://creativecommons.org/licenses/by/4.0/
+    title: Creative Commons Attribution 4.0 International License
+  {% elif cookiecutter.license == "CC-BY-NC-4.0" %}
+  - name: CC-BY-NC-4.0
+    path: https://creativecommons.org/licenses/by-nc/4.0/
+    title: Creative Commons Attribution-NonCommercial 4.0 International License
+  {% endif %}
+contributors:
+  - title: mySociety
+    path: https://mysociety.org
+    role: author
