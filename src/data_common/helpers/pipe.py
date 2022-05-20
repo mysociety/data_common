@@ -1,10 +1,13 @@
-from typing import Iterator
+# pyright: strict
+from typing import Iterator, Any
 from itertools import product
 
 
-def iter_format(str_source: str, *args, **kwargs) -> Iterator[str]:
+def iter_format(
+    str_source: str, *args: Iterator[Any], **kwargs: Iterator[Any]
+) -> Iterator[str]:
     """
-    like str.format but args past in should be iterable
+    like str.format but args passed in should be iterable
     Iterate through the full combination of formats provided.
     """
     if args:
@@ -12,13 +15,13 @@ def iter_format(str_source: str, *args, **kwargs) -> Iterator[str]:
     keys = list(kwargs.keys())
     parameters = product(*[kwargs[key] for key in keys])
 
-    def label_parameters(x):
-        return {str(x): y for x, y in zip(keys, x)}
+    def label_parameters(parameter: tuple[Any]) -> dict[str, Any]:
+        return {str(x): y for x, y in zip(keys, parameter)}
 
-    def pos_from_keyword(p):
+    def pos_from_keyword(p: dict[str, Any]) -> Iterator[str]:
         x = 0
-        while x in p:
-            yield p[x]
+        while str(x) in p:
+            yield p[str(x)]
             x += 1
 
     for p in parameters:
