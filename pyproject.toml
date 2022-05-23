@@ -37,6 +37,8 @@ jupyterlab = "3.2.6"
 jupyterlab-link-share = "0.2.4"
 scipy = "1.8.0"
 cookiecutter = "1.7.3"
+XlsxWriter = "^3.0.3"
+frictionless = "^4.38.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
