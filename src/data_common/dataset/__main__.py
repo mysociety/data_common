@@ -3,8 +3,16 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 from sre_constants import ANY
-from typing import (Any, Callable, Concatenate, Generic, List, ParamSpec,
-                    TypedDict, TypeVar)
+from typing import (
+    Any,
+    Callable,
+    Concatenate,
+    Generic,
+    List,
+    ParamSpec,
+    TypedDict,
+    TypeVar,
+)
 
 import pandas as pd
 import rich
