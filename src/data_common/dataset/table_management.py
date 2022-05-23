@@ -21,7 +21,10 @@ def is_unique(series: pd.Series) -> bool:
 
 
 def get_example(series: pd.Series) -> str | int | float:
-    item = series.dropna()[0]
+    item = list(series.dropna())
+    if len(item) == 0:
+        return ""
+    item = item[0]
     if isinstance(item, float):
         return float(item)
     if isinstance(item, int):

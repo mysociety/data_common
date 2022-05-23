@@ -15,6 +15,7 @@ from rich.markdown import Markdown
 from rich.table import Table
 from ruamel.yaml import YAML
 
+from .jekyll_management import collect_jekyll_data
 from .rich_assist import PanelPrint, df_to_table
 from .settings import get_settings
 from .table_management import SchemaValidator, update_table_schema
@@ -45,6 +46,13 @@ class DataResource:
     @property
     def slug(self) -> str:
         return self.path.stem
+
+    def get_order(self) -> int:
+        """
+        Get a sheet order if one has been set
+        """
+        desc = self.get_resource()
+        return desc.get("sheet_order", 999)
 
     @property
     def resource_path(self) -> Path:
@@ -158,7 +166,7 @@ class DataPackage:
         return self.path / "datapackage.yaml"
 
     def build_path(self) -> Path:
-        build_path = get_settings()["publish_dir"] / self.slug
+        build_path = get_settings()["publish_dir"] / "data" / self.slug
         if build_path.exists() is False:
             build_path.mkdir()
         return build_path
@@ -176,7 +184,7 @@ class DataPackage:
 
     @property
     def url(self) -> str:
-        return get_settings()["publish_url"] + self.slug
+        return get_settings()["publish_url"] + self.slug + "/"
 
     def rebuild_resource(self, slug: str):
         resource = self.resources()[slug]
@@ -223,9 +231,9 @@ class DataPackage:
         color_print("Building composite files", "blue", new_line=False)
         self.build_composites()
         color_print("✔️", "green")
-        color_print("Building markdown files", "blue", new_line=False)
-        self.build_markdown()
-        color_print("❌", "green")
+        color_print("Gathering Jekyll information", "blue", new_line=False)
+        collect_jekyll_data()
+        color_print("✔️", "green")
 
     def check_build_integrity(self):
         """
@@ -318,13 +326,20 @@ class DataPackage:
         ws.write(row, 3, "Metadata", bold)
         ws.write(row, 4, "Sheet description", bold)
         row += 1
-        for r in self.resources().values():
+
+        # sort sheets in order
+        sheets = list(self.resources().values())
+        sheets.sort(key=lambda x: x.slug)
+        sheets.sort(key=lambda x: x.get_order())
+
+        for r in sheets:
             desc = r.get_resource()
+            metadata_sheet = f"{r.slug}_metadata"[-31:]
             ws.write_url(row, 2, f"internal:{r.slug}!A1", string=desc["title"])
             ws.write_url(
                 row,
                 3,
-                f"internal:{r.slug}_metadata!A1",
+                f"internal:{metadata_sheet}!A1",
                 string="View column information",
             )
             ws.write(row, 4, desc["description"])
@@ -346,7 +361,11 @@ class DataPackage:
         """
         sheets: dict[str, pd.DataFrame] = {}
 
-        for slug, resource in self.resources().items():
+        sorted_resources = list(self.resources().items())
+        sorted_resources.sort(key=lambda x: x[1].slug)
+        sorted_resources.sort(key=lambda x: x[1].get_order())
+
+        for slug, resource in sorted_resources:
             sheets[slug] = pd.read_csv(resource.path)
             sheets[slug + "_metadata"] = resource.get_metadata_df()
 
@@ -354,14 +373,18 @@ class DataPackage:
 
         writer = pd.ExcelWriter(excel_path)
         writer = self.build_coversheet(writer)
+
         for sheet_name, df in sheets.items():
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
+            short_sheet_name = sheet_name[-31:]  # only allow 31 characters
+            df.to_excel(writer, sheet_name=short_sheet_name, index=False)
 
             for column in df:
                 column_length = max(df[column].astype(str).map(len).max(), len(column))
                 column_length += 4
                 col_idx = df.columns.get_loc(column)
-                writer.sheets[sheet_name].set_column(col_idx, col_idx, column_length)
+                writer.sheets[short_sheet_name].set_column(
+                    col_idx, col_idx, column_length
+                )
         writer.save()
 
     def build_sqlite(self):
