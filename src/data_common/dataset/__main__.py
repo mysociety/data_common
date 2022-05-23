@@ -83,7 +83,7 @@ def get_relevant_packages(slug: str, all: bool) -> List[DataPackage]:
     valid = valid_packages()
     current_stem = Path(os.getcwd()).stem
     if all:
-        return list(valid.values())
+        return [x for x in valid.values()]
     elif slug in valid:
         return [valid[slug]]
     elif current_stem in valid:
