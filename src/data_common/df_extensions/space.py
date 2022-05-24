@@ -743,7 +743,7 @@ class JointSpacePDAccessor(object):
         if normalize:
             cols = [normalize_series(x) for x in cols]
 
-        squared_cols = [x ** 2 for x in cols]
+        squared_cols = [x**2 for x in cols]
         res = reduce(pd.Series.add, squared_cols)  # add squared cols
         res = res.apply(np.sqrt)  # get square root
 

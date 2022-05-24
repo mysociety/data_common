@@ -65,7 +65,7 @@ class ChartTitle(alt.TitleParams):
         title: Union[str, List[str]],
         subtitle: Optional[Union[str, List[str]]] = None,
         line_limit: int = 60,
-        **kwargs: Any
+        **kwargs: Any,
     ):
 
         if isinstance(title, str):
@@ -162,7 +162,7 @@ class MSDisplayMixIn(_base):
         logo: bool = False,
         caption: str = "",
         scale_factor: Optional[int] = None,
-        **kwargs
+        **kwargs,
     ) -> "Chart":
 
         args = {}
