@@ -176,7 +176,11 @@ class DataPackage:
             raise ValueError(f"No datapackage.yaml found in {self.path}")
 
     def resources(self) -> dict[str, DataResource]:
-        return {x.stem: DataResource(path=x) for x in self.path.glob("*.csv")}
+
+        resources = [DataResource(path=x) for x in self.path.glob("*.csv")]
+        resources.sort(key=lambda x: x.slug)
+        resources.sort(key=lambda x: x.get_order())
+        return {x.slug: x for x in resources}
 
     @property
     def resource_count(self) -> int:
@@ -328,11 +332,8 @@ class DataPackage:
         row += 1
 
         # sort sheets in order
-        sheets = list(self.resources().values())
-        sheets.sort(key=lambda x: x.slug)
-        sheets.sort(key=lambda x: x.get_order())
 
-        for r in sheets:
+        for r in self.resources().values():
             desc = r.get_resource()
             metadata_sheet = f"{r.slug}_metadata"[-31:]
             ws.write_url(row, 2, f"internal:{r.slug}!A1", string=desc["title"])
@@ -361,11 +362,7 @@ class DataPackage:
         """
         sheets: dict[str, pd.DataFrame] = {}
 
-        sorted_resources = list(self.resources().items())
-        sorted_resources.sort(key=lambda x: x[1].slug)
-        sorted_resources.sort(key=lambda x: x[1].get_order())
-
-        for slug, resource in sorted_resources:
+        for slug, resource in self.resources().items():
             sheets[slug] = pd.read_csv(resource.path)
             sheets[slug + "_metadata"] = resource.get_metadata_df()
 
