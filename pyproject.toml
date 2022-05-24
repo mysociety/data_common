@@ -37,6 +37,7 @@ scipy = "1.8.0"
 cookiecutter = "1.7.3"
 XlsxWriter = "^3.0.3"
 frictionless = "^4.38.0"
+toml = "^0.10.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
