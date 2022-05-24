@@ -3,16 +3,7 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 from sre_constants import ANY
-from typing import (
-    Any,
-    Callable,
-    Concatenate,
-    Generic,
-    List,
-    ParamSpec,
-    TypedDict,
-    TypeVar,
-)
+from typing import Any, Callable, Concatenate, Generic, ParamSpec, TypedDict, TypeVar
 
 import pandas as pd
 import rich
@@ -56,8 +47,8 @@ def cli():
     pass
 
 
-@cli.command()
-def list():
+@cli.command("list")
+def list_command():
     """List all datasets"""
     packages = valid_packages()
 
@@ -79,11 +70,11 @@ def list():
     rich.print(table)
 
 
-def get_relevant_packages(slug: str, all: bool) -> List[DataPackage]:
+def get_relevant_packages(slug: str, all: bool) -> list[DataPackage]:
     valid = valid_packages()
     current_stem = Path(os.getcwd()).stem
     if all:
-        return [x for x in valid.values()]
+        return list(valid.values())
     elif slug in valid:
         return [valid[slug]]
     elif current_stem in valid:
