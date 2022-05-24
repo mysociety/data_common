@@ -6,12 +6,12 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from htmltabletomd import convert_table
-from bs4 import BeautifulSoup
 
 import nbformat
+from bs4 import BeautifulSoup
+from htmltabletomd import convert_table
 from ipython_genutils.text import indent as normal_indent
-from nbconvert import MarkdownExporter, HTMLExporter
+from nbconvert import HTMLExporter, MarkdownExporter
 from nbconvert.preprocessors import (
     ClearMetadataPreprocessor,
     ClearOutputPreprocessor,
@@ -19,7 +19,7 @@ from nbconvert.preprocessors import (
     ExtractOutputPreprocessor,
     Preprocessor,
 )
-from traitlets.config import Config
+from traitlets.config import Config  # type: ignore
 
 notebook_render_dir = "_notebook_resources"
 
