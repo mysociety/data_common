@@ -6,12 +6,6 @@ from ruamel.yaml import YAML
 
 from .settings import get_settings
 
-markdown_template = """
----
-{content}
----
-"""
-
 
 def markdown_with_frontmatter(data: dict[str, Any], dest: Path, content: str = ""):
 
