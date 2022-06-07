@@ -17,3 +17,7 @@ contributors:
   - title: mySociety
     path: https://mysociety.org
     role: author
+download_options:
+  gate: default
+  survey: default
+  header_text: default
