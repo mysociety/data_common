@@ -188,7 +188,12 @@ class DataPackage:
 
     @property
     def url(self) -> str:
-        return get_settings()["publish_url"] + "datasets/" + self.slug.replace("_", "-") + "/"
+        return (
+            get_settings()["publish_url"]
+            + "datasets/"
+            + self.slug.replace("_", "-")
+            + "/"
+        )
 
     def rebuild_resource(self, slug: str):
         resource = self.resources()[slug]

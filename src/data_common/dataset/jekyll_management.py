@@ -72,12 +72,12 @@ def collect_jekyll_data():
             all_resources.append(download_data)
 
         xlsx_data = {
-                        "name": (package["name"] + "_xlsx").replace("_", "-"),
-                        "package": package["name"],
-                        "title": package["name"] + "_xlsx",
-                        "filename": f"{package['name']}.xlsx",
-                        "file": f"/data/{package['name']}/{package['name']}.xlsx",
-                    }
+            "name": (package["name"] + "_xlsx").replace("_", "-"),
+            "package": package["name"],
+            "title": package["name"] + "_xlsx",
+            "filename": f"{package['name']}.xlsx",
+            "file": f"/data/{package['name']}/{package['name']}.xlsx",
+        }
         xlsx_data.update(package_level_download_options)
         all_resources.append(xlsx_data)
 

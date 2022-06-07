@@ -39,8 +39,6 @@ XlsxWriter = "^3.0.3"
 frictionless = "^4.38.0"
 toml = "^0.10.2"
 black = {extras = ["jupyter"], version = "^22.3.0"}
-
-[tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
 pyright = "^1.1.248"
 pylint = "2.12.2"
