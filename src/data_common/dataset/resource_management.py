@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from shutil import copyfile
 from typing import Any, Literal, TypedDict
+from urllib.parse import urlencode
 
 import pandas as pd
 import rich
@@ -273,6 +274,23 @@ class DataPackage:
         with open(self.build_path() / "datapackage.json", "w") as f:
             json.dump(datapackage, f, indent=4)
 
+    def survey_url(self) -> str:
+        """
+        link to the info gathering survey relevant for this survey
+        Either constructs from the pyproject default, or 
+        """
+        desc = self.get_datapackage()
+        settings = get_settings()
+        default_survey_url = settings["credit_url"]
+        specific_alchemer: str | None = desc.get("download_options", {}).get("survey", None)
+        if specific_alchemer:
+            survey_url = "https://survey.alchemer.com/s3/" + specific_alchemer
+        else:
+            survey_url = default_survey_url
+
+        survey_url += "?" + urlencode({"dataset_slug": self.slug, "download_link": self.url} )
+        return survey_url
+
     def build_coversheet(self, writer: pd.ExcelWriter) -> pd.ExcelWriter:
         desc = self.get_datapackage()
         settings = get_settings()
@@ -352,10 +370,11 @@ class DataPackage:
             row += 1
 
         row += 1
+
         ws.write_url(
             row,
             2,
-            settings["credit_url"] + f"?dataset_slug={self.slug}",
+            self.survey_url(),
             string=settings["credit_text"],
         )
 
