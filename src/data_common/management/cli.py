@@ -1,4 +1,4 @@
-import click
+import rich_click as click
 from data_common.management.render_processing import DocumentCollection
 from typing import Optional, List
 

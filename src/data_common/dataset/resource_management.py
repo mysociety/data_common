@@ -277,18 +277,22 @@ class DataPackage:
     def survey_url(self) -> str:
         """
         link to the info gathering survey relevant for this survey
-        Either constructs from the pyproject default, or 
+        Either constructs from the pyproject default, or
         """
         desc = self.get_datapackage()
         settings = get_settings()
         default_survey_url = settings["credit_url"]
-        specific_alchemer: str | None = desc.get("download_options", {}).get("survey", None)
+        specific_alchemer: str | None = desc.get("download_options", {}).get(
+            "survey", None
+        )
         if specific_alchemer:
             survey_url = "https://survey.alchemer.com/s3/" + specific_alchemer
         else:
             survey_url = default_survey_url
 
-        survey_url += "?" + urlencode({"dataset_slug": self.slug, "download_link": self.url} )
+        survey_url += "?" + urlencode(
+            {"dataset_slug": self.slug, "download_link": self.url}
+        )
         return survey_url
 
     def build_coversheet(self, writer: pd.ExcelWriter) -> pd.ExcelWriter:
