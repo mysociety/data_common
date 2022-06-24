@@ -2,7 +2,7 @@ name: {{ cookiecutter.slug }}
 title: {{ cookiecutter.title }}
 description : |
   {{ cookiecutter.description }}
-version: 0.1
+version: 0.1.0
 licenses:
   {% if cookiecutter.license == "CC-BY-4.0" %}
   - name: CC-BY-4.0
@@ -17,7 +17,27 @@ contributors:
   - title: mySociety
     path: https://mysociety.org
     role: author
-download_options:
-  gate: default
-  survey: default
-  header_text: default
+
+
+custom:
+  build:
+  tests:
+    - test_{{ cookiecutter.slug }}
+  download_options:
+    gate: default
+    survey: default
+    header_text: default
+  composite:
+    xlsx:
+      include: all
+      exclude: none
+      render: true
+    sqlite:
+      include: all
+      exclude: none
+      render: true
+    json:
+      include: all
+      exclude: none
+      render: true
+

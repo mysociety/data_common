@@ -57,6 +57,8 @@ def page_break():
 
 while "notebooks" in Path.cwd().parts:
     os.chdir("..")
+while (Path.cwd() / "pyproject.toml").exists() is False:
+    os.chdir("..")
 
 
 def notebook_setup():

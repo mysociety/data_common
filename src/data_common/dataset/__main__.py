@@ -3,19 +3,24 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 from sre_constants import ANY
-from typing import Any, Callable, Concatenate, Generic, ParamSpec, TypedDict, TypeVar
-
 import pandas as pd
 import rich
 import rich_click as click
-import toml
-from cookiecutter.main import cookiecutter
+
 from rich.panel import Panel
 from rich.table import Table
+import json
 
 from .resource_management import DataPackage
 from .rich_assist import df_to_table
+from .version_management import is_valid_semver
 from .settings import get_settings
+from .jekyll_management import render_jekyll
+
+from rich.traceback import install
+
+# Turn on rich tracebacks
+install(show_locals=False, width=None)
 
 
 def valid_packages() -> dict[str, DataPackage]:
@@ -26,12 +31,23 @@ def valid_packages() -> dict[str, DataPackage]:
     }
 
 
+from click.shell_completion import CompletionItem
+
+
+class SlugType(click.ParamType):
+    name = "envvar"
+
+    def shell_complete(self, ctx, param, incomplete):
+        return [CompletionItem(x) for x in valid_packages() if x.startswith(incomplete)]
+
+
 slug_command = click.option(
     "--slug",
     "-s",
     required=False,
     default="",
     show_default=False,
+    type=SlugType(),
     help="""Slug of dataset (name of directory).
     Optional if `--all` is set, or if the current directory is a valid dataset.
     """,
@@ -48,7 +64,11 @@ def cli():
 
 
 @cli.command("list")
-def list_command():
+@click.option("--json", "as_json", is_flag=True, help="Output in JSON format")
+@click.option(
+    "--no-validate", "no_validate", is_flag=True, help="Do not run validation checks"
+)
+def list_command(as_json: bool = False, no_validate: bool = False):
     """List all datasets"""
     packages = valid_packages()
 
@@ -56,18 +76,25 @@ def list_command():
         {
             "Package name": [x.slug for x in packages.values()],
             "Config file": [x.datapackage_path for x in packages.values()],
-            "Resource count": [x.resource_count for x in packages.values()],
-            "Current Errors": [len(x.validate()) for x in packages.values()],
         }
     )
+
+    if no_validate is False:
+        df["Resource count"] = [x.resource_count for x in packages.values()]
+        df["Current Errors"] = [len(x.validate(quiet=True)) for x in packages.values()]
+
     table = Table(
         title="Current data package status",
         show_header=True,
         header_style="bold green",
     )
-    table = df_to_table(df, table, show_index=False)
 
-    rich.print(table)
+    if as_json is False:
+        table = df_to_table(df, table, show_index=False)
+        rich.print(table)
+    else:
+        df["Config file"] = df["Config file"].apply(str)
+        rich.print(json.dumps(df.to_dict(orient="records")))
 
 
 def get_relevant_packages(slug: str, all: bool) -> list[DataPackage]:
@@ -96,9 +123,66 @@ def detail(slug: str = "", all: bool = False):
 
 
 @cli.command()
+@click.argument("version_or_rule", required=False)
+@click.option(
+    "--message",
+    "-m",
+    required=False,
+    default="",
+    show_default=False,
+    help="""Messsage for changelog for version change.
+    Can be blank if the rule_type is 'auto'. 
+    """,
+)
+@click.option(
+    "--auto-ban",
+    "-b",
+    required=False,
+    default=[],
+    multiple=True,
+    show_default=False,
+    help="""Throw an error if the auto patch rule returns this value (can be used to ban MAJOR updates without erroring on MINOR updates).
+    """,
+)
+@click.option(
+    "--dry-run", is_flag=True, help="Run version change without writing to disk"
+)
 @slug_command
 @all_command
-def refresh(slug: str = "", all: bool = False):
+def version(
+    version_or_rule: str | None = None,
+    message: str = "",
+    slug: str = "",
+    all: bool = False,
+    auto_ban: list[str] = [],
+    dry_run: bool = False,
+):
+    """Change the packages version if valid semvar, or bumps automatically if one of MAJOR MINOR PATCH AUTO"""
+    if version_or_rule is None:
+        version_or_rule = "DISPLAY"
+    auto_ban = [x.upper() for x in auto_ban]
+    bump_options = ["MAJOR", "MINOR", "PATCH", "AUTO", "INITIAL"]
+    package = get_relevant_packages(slug, all)
+    if version_or_rule in bump_options and version_or_rule != "AUTO" and message == "":
+        raise ValueError("Message required to bump version manually")
+
+    for p in package:
+        if version_or_rule == "DISPLAY":
+            print(f"{p.slug}: {p.get_current_version()}")
+        elif version_or_rule.upper() in bump_options:
+            p.bump_version_on_rule(
+                version_or_rule.upper(), message, dry_run=dry_run, auto_ban=auto_ban
+            )
+        elif is_valid_semver(version_or_rule):
+            p.bump_version_to(version_or_rule, message)
+        else:
+            raise ValueError(f"Not a valid semvar or bump rule: {version_or_rule}")
+
+
+@cli.command(name="update-schema")
+@slug_command
+@all_command
+def update_schema(slug: str = "", all: bool = False):
     """Rebuild schema based on any changes to file (retains descs)"""
     packages = get_relevant_packages(slug, all)
     for p in packages:
@@ -111,6 +195,7 @@ def refresh(slug: str = "", all: bool = False):
 @all_command
 def create(slug: str = "", all: bool = False):
     """Create a new directory for a dataset with a basic template."""
+    from cookiecutter.main import cookiecutter
 
     template_dir = Path(__file__).parent.parent / "resources" / "dataset_template"
     dataset_dir = get_settings()["dataset_dir"]
@@ -129,7 +214,7 @@ def validate(slug: str = "", all: bool = False):
     packages = get_relevant_packages(slug, all)
     for p in packages:
         rich.print(f"[blue]Validating: {p.slug}[/blue]")
-        errors = p.validate()
+        errors = p.validate(quiet=False)
         error_count += len(errors)
         for error, color in errors:
             rich.print(f"[{color}]{error}[/{color}]")
@@ -147,12 +232,48 @@ def validate(slug: str = "", all: bool = False):
 @all_command
 def build(slug: str = "", all: bool = False):
     """
-    Create composite files for publication
+    Build a packing using a defined function
     """
-    ...
     packages = get_relevant_packages(slug, all)
     for p in packages:
+        rich.print(f"[blue]Building: {p.slug}[/blue]")
+        p.build_from_function()
+        p.rebuild_all_resources()
+
+
+@cli.command()
+@slug_command
+@all_command
+def publish(slug: str = "", all: bool = False):
+    """
+    Render any missing versions and move them to the jekyll data directory.
+    """
+
+    packages = get_relevant_packages(slug, all)
+    for p in packages:
+        p.rebuild_all_resources()
         p.build_package()
+        p.build_missing_previous_versions()
+    rich.print("Building Jekyll markdown files")
+    render_jekyll()
+
+
+@cli.command()
+def render():
+    """
+    Build Jekyll pages from the Jekyll's data directory.
+    Run as part of build.
+    """
+    rich.print("Building Jekyll markdown files")
+    render_jekyll()
+
+
+@cli.command()
+def auto_complete():
+    """
+    Returns a command which when run turns on autocomplete
+    """
+    print(r"eval '$(_DATASET_COMPLETE=bash_source dataset)'")
 
 
 def run():

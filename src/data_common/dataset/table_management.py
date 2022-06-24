@@ -17,6 +17,9 @@ class SchemaValidator(TypedDict):
 
 
 def is_unique(series: pd.Series) -> bool:
+    """
+    This function takes in a series and returns a boolean of whether or not all the values in the series are unique.
+    """
     return len(series) == len(series.unique())
 
 
@@ -25,6 +28,8 @@ def get_example(series: pd.Series) -> str | int | float:
     if len(item) == 0:
         return ""
     item = item[0]
+    if isinstance(item, bool):
+        return str(item)
     if isinstance(item, float):
         return float(item)
     if isinstance(item, int):
@@ -33,6 +38,9 @@ def get_example(series: pd.Series) -> str | int | float:
 
 
 def get_descriptions_from_schema(original_schema: SchemaValidator) -> dict[str, str]:
+    """
+    Returns a dictionary mapping field names to descriptions.
+    """
     fields = original_schema["fields"]
     return {
         x["name"]: x["description"]
@@ -97,12 +105,15 @@ def update_table_schema(
     path: Path, existing_schema: SchemaValidator | None
 ) -> SchemaValidator:
     df = pd.read_csv(path)
+
+    # get columns that have less than 15 unique entries and have no blank entries
+    cols = df.apply(lambda x: x.nunique() < 15 and not x.isnull().any())
+    low_count_cols = df.columns.to_series()[cols].to_list()
+
     return Schema.get_table_schema(
         df,
         descriptions=get_descriptions_from_schema(existing_schema)
         if existing_schema
         else {},
-        enums={
-            "section": Schema.USE_UNIQUE,
-        },
+        enums={x: Schema.USE_UNIQUE for x in low_count_cols},
     )
