@@ -1,11 +1,12 @@
 import hashlib
 import importlib
+import io
 import json
 import os
-import sys
 import shutil
 import sqlite3
 import subprocess
+import sys
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +24,7 @@ from rich.markdown import Markdown
 from rich.table import Table
 from ruamel.yaml import YAML
 
+from .jekyll_management import render_jekyll
 from .rich_assist import PanelPrint, df_to_table
 from .settings import get_settings
 from .table_management import SchemaValidator, update_table_schema
@@ -32,7 +34,6 @@ from .version_management import (
     parse_semver,
     semver_is_higher,
 )
-from .jekyll_management import render_jekyll
 
 
 def diff_dicts(a: dict, b: dict, missing=KeyError):
@@ -227,8 +228,18 @@ class DataResource:
 
         yaml = YAML()
         yaml.default_flow_style = False
-        with open(self.resource_path, "w") as f:
+
+        # dump yaml to a textio stream
+        with io.StringIO() as f:
             yaml.dump(new_dict, f)
+            yaml_str = f.getvalue()
+
+        # horrible little patch to always put a quote around No
+        yaml_str = yaml_str.replace(": No\n", ": 'No'\n")
+        yaml_str = yaml_str.replace(": Yes\n", ": 'Yes'\n")
+
+        with open(self.resource_path, "w") as f:
+            f.write(yaml_str)
         print(f"Updated config for {self.slug} to {self.resource_path}")
 
 
