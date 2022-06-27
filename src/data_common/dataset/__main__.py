@@ -100,7 +100,7 @@ def list_command(as_json: bool = False, no_validate: bool = False):
 def get_relevant_packages(slug: str, all: bool) -> list[DataPackage]:
     valid = valid_packages()
     current_stem = Path(os.getcwd()).stem
-    if all:
+    if len(valid) == 1 or all:
         return list(valid.values())
     elif slug in valid:
         return [valid[slug]]
