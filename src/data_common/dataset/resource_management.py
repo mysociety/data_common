@@ -363,11 +363,13 @@ class DataPackage:
         if bump_rule == "AUTO":
             bump_results = self.derive_bump_rule_from_change()
             if bump_results:
-                bump_rule, update_message = bump_results
+                bump_rule, auto_update_message = bump_results
                 if bump_rule in auto_ban:
                     raise ValueError(
                         f"The change caused by {update_message} is a {bump_rule} change, which is banned by the auto-ban rule."
                     )
+                if update_message == "":
+                    update_message = auto_update_message
             else:
                 rich.print("[red]No changes detected, not bumping[/red]")
                 return None
