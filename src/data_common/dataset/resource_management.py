@@ -32,6 +32,7 @@ from .version_management import (
     parse_semver,
     semver_is_higher,
 )
+from .jekyll_management import render_jekyll
 
 
 def diff_dicts(a: dict, b: dict, missing=KeyError):
@@ -668,6 +669,7 @@ class DataPackage:
                     self.rebuild_all_resources()
                     self.build_package()
                     self.build_missing_previous_versions()
+                    render_jekyll()
 
     def store_version(self):
         """
