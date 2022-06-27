@@ -23,6 +23,7 @@ custom:
   build:
   tests:
     - test_{{ cookiecutter.slug }}
+  dataset_order: 0
   download_options:
     gate: default
     survey: default

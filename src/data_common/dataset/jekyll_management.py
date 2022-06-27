@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any
 import shutil
 from ruamel.yaml import YAML
+import pandas as pd
 
 from .settings import get_settings
 from .version_management import map_versions_to_latest_major_minor
@@ -58,6 +59,36 @@ def fill_in_versions():
             print(f"Copied {full} to {reduced}")
 
 
+def make_version_info_page(items: list[dict[str, Any]], output_dir: Path):
+    """
+    Make a page for each dataset that contains a list of all the versions
+    avaliable and major, minor, and latest versions link to another dataset
+    """
+
+    if output_dir.exists() is False:
+        output_dir.mkdir()
+    # remove existing files
+    for e in output_dir.glob("*/*.md"):
+        e.unlink()
+
+    df = pd.DataFrame(items)[["name", "title", "version", "full_version"]]
+
+    for name, d in df.groupby("name"):
+        safe_name = name.replace("-", "_")
+        data_dict = {
+            "name": name,
+            "title": d["title"].iloc[0],
+            "versions": {},
+            "permalink": f"/datasets/{safe_name}/versions",
+        }
+        d = d.sort_values("full_version", ascending=False)
+        for gv, rd in d.groupby("full_version"):
+            data_dict["versions"][str(gv)] = rd["version"].apply(str).to_list()
+
+        markdown_file = output_dir / f"{safe_name}.md"
+        markdown_with_frontmatter(data_dict, markdown_file)
+
+
 def collect_jekyll_data():
     """
     Collect information from data packages published to Jekyll
@@ -67,8 +98,11 @@ def collect_jekyll_data():
 
     def grab_version(package_folder: Path):
         data = json.loads(package_folder.read_text())
-        data["version"] = package_folder.parent.stem
-        data["permalink"] = "/datasets/" + data["name"] + "/" + data["version"]
+        data["full_version"] = data["version"]
+        data["version"] = package_folder.parent.name
+        data["permalink"] = (
+            "/datasets/" + data["name"] + "/" + data["version"].replace(".", "_")
+        )
         return data
 
     all_packages = [grab_version(d) for d in data_dir.glob("*/*/datapackage.json")]
@@ -81,6 +115,11 @@ def collect_jekyll_data():
     render_sources_to_dir(
         all_packages, output_dir=get_settings()["publish_dir"] / "_datasets"
     )
+
+    make_version_info_page(
+        all_packages, output_dir=get_settings()["publish_dir"] / "_versionlists"
+    )
+
     render_sources_to_dir(
         resources, output_dir=get_settings()["publish_dir"] / "_downloads"
     )
@@ -111,11 +150,15 @@ def collect_jekyll_data_for_package(package: dict[str, Any]):
         r["download_id"] = "_".join([package["name"], r["name"]]).replace("_", "-")
         download_data = {
             "name": r["download_id"],
-            "permalink": "/downloads/" + r["download_id"] + "/" + package["version"],
+            "permalink": "/downloads/"
+            + r["download_id"]
+            + "/"
+            + package["version"].replace(".", "_"),
             "package": package["name"],
             "title": r["name"],
             "filename": r["path"],
             "version": package["version"],
+            "full_version": package["version"],
             "file": f"/data/{package['name']}/{package['version']}/{r['path']}",
         }
         download_data.update(package_level_download_options)
@@ -123,18 +166,22 @@ def collect_jekyll_data_for_package(package: dict[str, Any]):
 
     xlsx_data = {
         "name": (package["name"] + "_xlsx").replace("_", "-"),
+        "permalink": f"/downloads/{package['name']}_xlsx/{package['version'].replace('.', '_')}",
         "package": package["name"],
         "title": package["name"] + "_xlsx",
         "filename": f"{package['name']}.xlsx",
         "version": package["version"],
+        "full_version": package["version"],
         "file": f"/data/{package['name']}/{package['version']}/{package['name']}.xlsx",
     }
     json_data = {
         "name": (package["name"] + "_json").replace("_", "-"),
+        "permalink": f"/downloads/{package['name']}_json/{package['version'].replace('.', '_')}",
         "package": package["name"],
         "title": package["name"] + "_json",
         "filename": f"{package['name']}.json",
         "version": package["version"],
+        "full_version": package["version"],
         "file": f"/data/{package['name']}/{package['version']}/{package['name']}.json",
     }
     xlsx_data.update(package_level_download_options)

@@ -814,6 +814,10 @@ class DataPackage:
         """
         datapackage = self.get_datapackage()
         datapackage["resources"] = [x.get_resource() for x in self.resources().values()]
+        if "custom" not in datapackage:
+            datapackage["custom"] = {}
+            if "dataset_order" not in datapackage["custom"]:
+                datapackage["custom"]["dataset_order"] = 999
         return datapackage
 
     def build_json(self):
@@ -821,8 +825,6 @@ class DataPackage:
         Create full json datapackage file for all resources
         """
         datapackage = self.get_current_datapackage_json()
-        # if "custom" in datapackage:
-        #    del datapackage["custom"]
         with open(self.build_path() / "datapackage.json", "w") as f:
             json.dump(datapackage, f, indent=4)
 
