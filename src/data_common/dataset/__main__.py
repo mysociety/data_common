@@ -161,7 +161,7 @@ def version(
     all: bool = False,
     auto_ban: list[str] = [],
     dry_run: bool = False,
-    publish: bool = False
+    publish: bool = False,
 ):
     """Change the packages version if valid semvar, or bumps automatically if one of MAJOR MINOR PATCH AUTO"""
     if version_or_rule is None:
@@ -177,10 +177,14 @@ def version(
             print(f"{p.slug}: {p.get_current_version()}")
         elif version_or_rule.upper() in bump_options:
             p.bump_version_on_rule(
-                version_or_rule.upper(), message, dry_run=dry_run, auto_ban=auto_ban, publish=publish
+                version_or_rule.upper(),
+                message,
+                dry_run=dry_run,
+                auto_ban=auto_ban,
+                publish=publish,
             )
         elif is_valid_semver(version_or_rule):
-            p.bump_version_to(version_or_rule, message, publish )
+            p.bump_version_to(version_or_rule, message, publish)
 
         else:
             raise ValueError(f"Not a valid semvar or bump rule: {version_or_rule}")
