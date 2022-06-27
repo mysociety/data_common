@@ -328,6 +328,7 @@ class DataPackage:
         update_message: str,
         dry_run: bool = False,
         auto_ban: list[str] = [],
+        publish: bool = False,
     ):
         """
         Bumps the version number of the datapackage according to the
@@ -363,7 +364,7 @@ class DataPackage:
         else:
             new_version = bump_version(current_version, bump_rule.lower())
 
-        self.bump_version_to(new_version, update_message, dry_run)
+        self.bump_version_to(new_version, update_message, dry_run, publish=publish)
 
     def previous_versions(self) -> list[str]:
         """
@@ -633,7 +634,11 @@ class DataPackage:
             )
 
     def bump_version_to(
-        self, new_semver: str, update_message: str, dry_run: bool = False
+        self,
+        new_semver: str,
+        update_message: str,
+        dry_run: bool = False,
+        publish: bool = False,
     ):
         version = self.get_current_version()
         desc = self.get_datapackage()
@@ -659,6 +664,10 @@ class DataPackage:
                 self.update_yaml({"version": new_semver, "custom": custom})
                 self.store_version()
                 rich.print(f"{self.slug} version bumped to [green]{new_semver}[/green]")
+                if publish:
+                    self.rebuild_all_resources()
+                    self.build_package()
+                    self.build_missing_previous_versions()
 
     def store_version(self):
         """

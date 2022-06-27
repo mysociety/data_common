@@ -83,7 +83,9 @@ def make_version_info_page(items: list[dict[str, Any]], output_dir: Path):
         }
         d = d.sort_values("full_version", ascending=False)
         for gv, rd in d.groupby("full_version"):
-            data_dict["versions"][str(gv)] = rd["version"].apply(str).to_list()
+            items = rd["version"].apply(str).to_list()
+            items.sort()
+            data_dict["versions"][str(gv)] = items
 
         markdown_file = output_dir / f"{safe_name}.md"
         markdown_with_frontmatter(data_dict, markdown_file)
