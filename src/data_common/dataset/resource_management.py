@@ -292,7 +292,13 @@ class DataPackage:
         ]
         if quiet is True:
             sys.stdout = old_stdout
-        return max(results) == 0
+        if results:
+            return max(results) == 0
+        else:
+            rich.print(
+                "[red]A test path is configured, but the file does not exist[/red]"
+            )
+            return True  # Ok with this, with the warning
 
     def build_from_function(self):
         """
