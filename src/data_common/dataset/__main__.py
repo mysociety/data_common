@@ -284,7 +284,7 @@ def auto_complete():
     """
     Returns a command which when run turns on autocomplete
     """
-    print(r"eval '$(_DATASET_COMPLETE=bash_source dataset)'")
+    print(r'eval "$(_DATASET_COMPLETE=bash_source dataset)"')
 
 
 def run():
