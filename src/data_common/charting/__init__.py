@@ -21,3 +21,13 @@ def enable_sw_charts():
     alt.renderers.register("sw_saver", sw_render)  # type: ignore
     alt.renderers.enable("sw_saver")
     Renderer.default_renderer = SWSaver
+
+
+gb_format = {
+  "decimal": ".",
+  "thousands": ",",
+  "grouping": [3],
+  "currency": ["£", ""]
+}
+
+alt.renderers.set_embed_options(formatLocale=gb_format)
