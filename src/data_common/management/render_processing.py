@@ -243,18 +243,21 @@ class Document:
 
 class DocumentCollection:
     """
-    Collection of potential documents
+    Collection of potential documents.
     In most cases there will only be one.
     """
 
     @classmethod
-    def from_yaml(
-        cls: Type[DocumentCollection], yaml_file: Path | str
+    def from_folder(cls: Type[DocumentCollection], dir: Path
     ) -> DocumentCollection:
-        with open(yaml_file) as stream:
-            data: dict[str, Any]
-            data = yaml.safe_load(stream)  # type: ignore
-        return cls(data)
+        yaml_files = dir.glob("*.yaml")
+        all_docs = {}
+        for y in yaml_files:
+            with open(y) as stream:
+                data: dict[str, Any]
+                data = yaml.safe_load(stream)  # type: ignore
+            all_docs[y.stem] = data
+        return cls(all_docs)
 
     def __init__(self, data: dict[str, Any]):
 
