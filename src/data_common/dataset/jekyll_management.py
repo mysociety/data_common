@@ -9,7 +9,13 @@ from .settings import get_settings
 from .version_management import map_versions_to_latest_major_minor
 
 
-def markdown_with_frontmatter(data: dict[str, Any], dest: Path, content: str = ""):
+def markdown_with_frontmatter(data: dict[str, Any], dest: Path, content: str = "", from_file : Path | None = None):
+
+    if content and from_file:
+        raise ValueError("Trying to use contents and from_file arguments")
+
+    if from_file:
+        content = from_file.read_text()
 
     yaml = YAML()
     yaml.default_flow_style = False
