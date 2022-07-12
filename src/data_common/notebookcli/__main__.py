@@ -83,9 +83,9 @@ def render(
 @click.argument("slug", default="")
 @click.option("-p", "--param", nargs=2, multiple=True)
 @click.option("--all/--not-all", "render_all", default=False)
-def upload(slug="", param=[], render_all=False):
+def publish(slug="", param=[], render_all=False):
     """
-    Upload a previously rendered collection of documents to the chosen export route.
+    Publish a previously rendered collection of documents to the chosen export route.
     """
     params = {x: y for x, y in param}
 
