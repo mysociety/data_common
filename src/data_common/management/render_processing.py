@@ -281,7 +281,7 @@ class Document:
                 shutil.copytree(
                     source_file.parent / "_notebook_resources",
                     analysis / "notebook_resources",
-                    dirs_exist_ok=True
+                    dirs_exist_ok=True,
                 )
 
 
