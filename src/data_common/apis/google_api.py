@@ -13,8 +13,6 @@ SCOPES = [
     "https://www.googleapis.com/auth/script.projects",
 ]
 
-url_template = "https://docs.google.com/document/d/{0}/edit"
-
 
 class DriveIntegration:
     def __init__(self, data):
@@ -80,6 +78,24 @@ class DriveIntegration:
         """
 
         file_path = Path(file_path)
+
+        if file_path.suffix == ".docx":
+            mimetype = "application/vnd.google-apps.document"
+            upload_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            url_template = "https://docs.google.com/document/d/{0}/edit"
+        elif file_path.suffix == ".csv":
+            mimetype = "application/vnd.google-apps.spreadsheet"
+            upload_type = "text/csv"
+            url_template = "https://docs.google.com/spreadsheets/d/{0}/edit"
+        elif file_path.suffix == ".xlsx":
+            mimetype = "application/vnd.google-apps.spreadsheet"
+            upload_type = (
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            url_template = "https://docs.google.com/spreadsheets/d/{0}/edit"
+        else:
+            raise ValueError(f"Don't have a good handler for {file_path.suffix}")
+
         if not file_name:
             file_name = file_path.stem
 
@@ -101,7 +117,7 @@ class DriveIntegration:
             "name": file_name,
             "driveID": drive_id,
             "parents": [folder_id],
-            "mimeType": "application/vnd.google-apps.document",
+            "mimeType": mimetype,
         }
 
         file_path = str(file_path)
@@ -109,7 +125,7 @@ class DriveIntegration:
         # in this case 'test.html'
         media = MediaFileUpload(
             file_path,
-            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            mimetype=upload_type,
         )
 
         # Now we're doing the actual post, creating a new file of the uploaded type
