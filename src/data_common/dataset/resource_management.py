@@ -177,7 +177,7 @@ class DataResource:
             lambda x: "Yes" if x.get("unique", False) else "No"
         )
         df["options"] = df["constraints"].apply(
-            lambda x: ", ".join(str(x.get("enum", [])))
+            lambda x: ", ".join([str(x) for x in x.get("enum", [])])
         )
         df = df.drop(columns=["constraints"]).rename(columns={"name": "column"})
         df = df[["column", "description", "type", "example", "unique", "options"]]
