@@ -191,13 +191,34 @@ Multiple documents can be defined in the render.yaml. Each document can be speci
 
 Will render the doc with the key of `second-example-doc`. When there is only one document, the key does not need to be specified. 
 
-# Uploading
+# Publishing notebooks
 
-The only build-in uploading steps are to google drive. This needs some additional settings added to the `.env` (see the passwords page on the wiki). Once present, the upload can be run once, and it will trigger the auth workflow to give you the final client key to add to the `.env`.
+The publication flow for notebooks is managed by files in `notebooks/_render_config`. This can combine multiple notebooks into a single output, [parameterize using papermill](https://papermill.readthedocs.io/en/latest/), and output to several options.
 
-Once this is done, the render path is defined in the `render.yaml`, where you need to specify both the drive_id and the folder_id (look at the URL of the folder in question). The document will be named with the title defined in `render.yaml`. Caution: google drive allows multiple files of the same name in the same folder, so use the jinja templating to make sure the name changes if the process will be rerun. 
+A notebook can be rendered and published using the `notebook` tool. Run `notebook --help` to learn more. 
 
-The resulting file can be uploaded with `python manage.py upload`. 
+`notebook render` - runs and combined all notebooks into an markdown and .docx file. If you do not want to include these files in the repo, add `_render/` to `.gitignore`.
+
+`notebook publish` will run all publication flows.
+
+These steps can be comabined  with `notebook render --publish`.
+
+The publish options avalible are google drive and jekyll.
+
+Google drive will (with correct env permissions - see the passwords page on the wiki) upload the rendered document.
+
+The config can look like this:
+
+```
+upload:
+  gdrive:
+    g_drive_name: All staff
+    g_folder_name: Climate/Metrics
+```
+
+You can also specify `[blah]_id` for both and use the drive/folder ids in google drive. 
+
+The Jekyll upload will take the markdown file and move it to the jekyll folder in `docs`. This will make it avaliable in public in the github pages site.
 
 # Parameterised notebooks
 
