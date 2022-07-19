@@ -9,7 +9,9 @@ from .settings import get_settings
 from .version_management import map_versions_to_latest_major_minor
 
 
-def markdown_with_frontmatter(data: dict[str, Any], dest: Path, content: str = "", from_file : Path | None = None):
+def markdown_with_frontmatter(
+    data: dict[str, Any], dest: Path, content: str = "", from_file: Path | None = None
+):
 
     if content and from_file:
         raise ValueError("Trying to use contents and from_file arguments")
