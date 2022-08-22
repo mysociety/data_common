@@ -51,19 +51,18 @@ def semver_is_higher(semver1: str, semver2: str) -> bool:
     if semver1_dict is None or semver2_dict is None:
         return False
     # compare major versions
-    if semver2_dict["major"] > semver1_dict["major"]:
+    if int(semver2_dict["major"]) > int(semver1_dict["major"]):
         return True
     # compare minor versions
-    if (
-        semver2_dict["major"] == semver1_dict["major"]
-        and semver2_dict["minor"] > semver1_dict["minor"]
-    ):
+    if int(semver2_dict["major"]) == int(semver1_dict["major"]) and int(
+        semver2_dict["minor"]
+    ) > int(semver1_dict["minor"]):
         return True
     # compare patch versions
     if (
-        semver2_dict["major"] == semver1_dict["major"]
-        and semver2_dict["minor"] == semver1_dict["minor"]
-        and semver2_dict["patch"] > semver1_dict["patch"]
+        int(semver2_dict["major"]) == int(semver1_dict["major"])
+        and int(semver2_dict["minor"]) == int(semver1_dict["minor"])
+        and int(semver2_dict["patch"]) > int(semver1_dict["patch"])
     ):
         return True
     # otherwise, semver2 is not a higher version

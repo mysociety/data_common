@@ -689,6 +689,8 @@ class DataPackage:
                     self.build_package()
                     self.build_missing_previous_versions()
                     render_jekyll()
+        else:
+            print(f"{new_semver} is not higher than {version} or is 0.1.0.")
 
     def store_version(self):
         """
