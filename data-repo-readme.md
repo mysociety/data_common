@@ -6,6 +6,35 @@ It is optimized to run in Github Codespaces, but will also work locally, either 
 
 To start a new project, create a repo from this template: https://github.com/mysociety/python-data-template/generate. This will bootstrap a cookiecutter version of the template, and turn on GitHub Pages. 
 
+# Installing and running a project
+
+The standard data repository is easiest to set up in Codespaces - where opening a new codespace should initalise the repo correctly using stored docker images. This also makes it easier to setup with common secrets. 
+
+All the config required for that also means it works well locally using VS Code and the [remote containers extention](https://code.visualstudio.com/docs/remote/containers) using docker. On opening the project in VS Code, it should prompt to re-open the folder inside the dev container.
+
+To run a single script from outside the container, `docker compose run [x]` should work well. 
+
+The project (in most cases) can be run without docker at all. If python 3.10 is installed locally, you can [install poetry](https://python-poetry.org/) and provision that way:
+
+```bash
+pip install poetry
+script/setup
+python -m poetry install
+python -m poetry shell
+# now in virtual environment
+```
+
+This approach will not (without more manual work) produce the mySociety branded charts well, as that is dependent a selenium setup in the dockerfile. It can handle the dataset tool though. 
+
+# Setting up automated testing/building of github pages
+
+The `.github/workflow-templates` folder can either be renamed `workflows` or used as the building blocks for new workflows.
+
+This currently contains two templates.
+
+- `test.yml` - Use GitHub Actions to enforce automated tests on the project.
+- `build.yml` - Build datasets and create a Github Pages page.
+
 # Structure of this repo
 
 - `.devcontainer` - The setup instructions for VS Code and Codespaces to work with the relevant Dockerfile. Includes expected exemptions.
