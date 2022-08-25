@@ -232,7 +232,7 @@ A notebook can be rendered and published using the `notebook` tool. Run `noteboo
 
 These steps can be comabined  with `notebook render --publish`.
 
-The publish options avalible are google drive and jekyll.
+The publish options avalible are `gdrive`, `jekyll`, and `readme`. 
 
 Google drive will (with correct env permissions - see the passwords page on the wiki) upload the rendered document.
 
@@ -247,7 +247,12 @@ upload:
 
 You can also specify `[blah]_id` for both and use the drive/folder ids in google drive. 
 
-The Jekyll upload will take the markdown file and move it to the jekyll folder in `docs`. This will make it avaliable in public in the github pages site.
+The Jekyll upload will take the markdown file and move it to the jekyll folder in `docs`. This will make it avaliable in public in the github pages site. Any extra parameters are added to the front matter for the file.
+
+The readme option will output the final file to `readme.md` in the root of the repo. 
+This takes 'start' and 'end' parameters that give anchor text to inject the content between. If not set, will override entire readme.
+
+
 
 # Parameterised notebooks
 

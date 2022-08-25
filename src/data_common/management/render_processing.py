@@ -162,7 +162,7 @@ class Document:
         this will populate/repopulate based on the currently known context
         """
         self._rendered_data = self._data.copy()
-        for m_path, items in self._data["context"].items():
+        for m_path, items in self._data.get("context", {}).items():
             mod = import_module(m_path)
             for i in items:
                 context[i] = getattr(mod, i)
@@ -245,13 +245,48 @@ class Document:
 
     def upload(self, context: Optional[dict[str, Any]] = None):
         """
-        Upload result to service (gdrive currently)
+        Upload result to service
         """
 
         if context:
             self.init_rendered_values(context)
 
         for k, v in self._data["upload"].items():
+            if v is None:
+                v = {}
+            if k == "readme":
+                print("Publishing to readme")
+                source_file = self.rendered_filename(".md")
+                contents = source_file.read_text().replace(
+                    "_notebook_resources", "_readme_resources"
+                )
+                readme = Path("readme.md")
+                if readme.exists() is False:
+                    raise ValueError("readme.md not found")
+                readme_contents = readme.read_text()
+                start_anchor = v.get("start", "")
+                end_anchor = v.get("end", "")
+                if start_anchor:
+                    start_text = readme_contents.find(start_anchor)
+                else:
+                    start_text = 0
+
+                if end_anchor:
+                    end_text = readme_contents.find(end_anchor, start_text)
+                else:
+                    end_text = len(readme_contents)
+                new_content = (
+                    readme_contents[: start_text + len(start_anchor)]
+                    + contents
+                    + readme_contents[end_text:]
+                )
+                with open(readme, "w") as f:
+                    f.write(new_content)
+                shutil.copytree(
+                    source_file.parent / "_notebook_resources",
+                    "_readme_resources",
+                    dirs_exist_ok=True,
+                )
             if k == "gdrive":
                 file_name = self._rendered_data["title"]
                 file_path = self.rendered_filename(".docx")
