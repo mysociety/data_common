@@ -26,7 +26,7 @@ from .charting import (
     enable_sw_charts,
     reset_renderer,
 )
-from .df_extensions import common, space, viz
+from .pandas.df_extensions import common, space, viz, la
 from .helpers.pipe import iter_format
 from .management.exporters import render_to_html, render_to_markdown
 from .management.settings import settings
