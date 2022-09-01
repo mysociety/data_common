@@ -9,5 +9,5 @@ RUN cd /setup/ \
     && chmod +x packages_setup.bash \
     && ./packages_setup.bash \
     && mkdir --parents /setup/src/data_common && touch /setup/src/data_common/__init__.py \
-    && export PATH="$HOME/.poetry/bin:$PATH" \
+    && export PATH="/root/.local/bin:$PATH" \
     && cd /setup/ && poetry install 
