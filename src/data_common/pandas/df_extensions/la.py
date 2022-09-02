@@ -4,7 +4,7 @@ local authority data
 
 """
 import string
-from functools import lru_cache
+from functools import lru_cache, partial, wraps
 from typing import Callable, List, Optional, overload, Literal
 from data_common.dataset import get_dataset_url
 import numpy as np
@@ -33,7 +33,17 @@ gss_code = get_dataset_url(
 )
 
 
-@lru_cache
+def cache_and_wrap(func):
+    cached_function = lru_cache(func)
+
+    @wraps(func)
+    def inner(*args, **kwargs):
+        return cached_function(*args, **kwargs)
+
+    return inner
+
+
+@cache_and_wrap
 def get_la_df(include_historical: bool = False) -> pd.DataFrame:
     """
     retrieve the big grid of all local authority details from the repo
@@ -44,7 +54,7 @@ def get_la_df(include_historical: bool = False) -> pd.DataFrame:
     return df
 
 
-@lru_cache
+@cache_and_wrap
 def gss_registry_lookup(allow_none: bool = False) -> Callable:
     """
     retrieve a function that can be applied to convert gss codes to
@@ -70,7 +80,7 @@ def remove_punctuations(text):
     return text
 
 
-@lru_cache
+@cache_and_wrap
 def name_registry_lookup(allow_none: bool = False) -> Callable:
     """
     returns a function that will convert the name to 3-letter reg code
@@ -101,7 +111,7 @@ def name_registry_lookup(allow_none: bool = False) -> Callable:
 
 
 @pd.api.extensions.register_dataframe_accessor("la")  # type: ignore
-class LAPDAccessor(object):
+class LocalAuthorityDataFrameManipulator(object):
     """
     extention to pandas dataframe
     """
@@ -146,10 +156,12 @@ class LAPDAccessor(object):
 
     def create_code_column(
         self,
-        from_type: str = "name",
+        from_type: Literal["name"] | Literal["gss"] = "name",
         source_col: Optional[str] = None,
         code_col_name: str = "local-authority-code",
         allow_none: bool = False,
+        set_index: bool = False,
+        drop_source: bool = False,
     ) -> pd.DataFrame:
         """
         Create registry code column
@@ -176,6 +188,10 @@ class LAPDAccessor(object):
             )
 
         df[code_col_name] = df[source_col].apply(lookup_func)
+        if set_index:
+            df = df.set_index(code_col_name)
+        if drop_source:
+            df = df.drop(columns=[source_col])
 
         return df
 
@@ -250,9 +266,44 @@ class LAPDAccessor(object):
             columns, aggfunc, weight_on, comparison_column, upgrade_absent
         )
 
+    def to_multiple_higher(
+        self,
+        columns: Optional[List[str]] = None,
+        aggfunc="mean",
+        weight_on: Optional[str] = None,
+        higher_levels: Optional[List[str]] = ["county-la", "combined-authority"],
+        upgrade_absent: bool = False,
+    ) -> pd.DataFrame:
+        """
+        If given values by primary authority, we may want the
+        overlapping authorities
+        (upper level, regional partnerships, etc)
+        This uses the lookup of how authorities were merged to update
+        this data.
+        the aggfunc is anything pandas .agg function can expect.
+        So 'mean', 'sum',
+        or a custom function that returns a dataframe from a series
+        input.
+        'weight_on' will give a mean that's been weighted by a
+        column in the lookup table.
+        Good values are 'pop_2020' or 'area'
+        """
+
+        f = partial(
+            self.to_current,
+            columns=columns,
+            aggfunc=aggfunc,
+            weight_on=weight_on,
+            upgrade_absent=upgrade_absent,
+        )
+        if not higher_levels:
+            raise ValueError("Need higher levels")
+        dfs = [f(comparison_column=x) for x in higher_levels]
+        return pd.concat(dfs)
+
 
 @pd.api.extensions.register_series_accessor("la")  # type: ignore
-class LASeriesAccessor(object):
+class LocalAuthoritySeriesManipulator(object):
     """
     extention to python series to more easily work with local authority data
     """
