@@ -29,7 +29,7 @@ def get_settings(
 
     env_data = {}
     if env_file and Path(*top_level, env_file).exists():
-        with open(env_file, "r") as fp:
+        with open(Path(*top_level, env_file), "r") as fp:
             lines = [x.strip() for x in fp.readlines() if x.strip()]
             env_data = [x.split("=", 1) for x in lines]
             env_data = {x: y for x, y in env_data}
