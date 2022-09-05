@@ -89,11 +89,11 @@ def name_registry_lookup(allow_none: bool = False) -> Callable:
     banned_words = ["council", "unitary"]
 
     df = pd.read_csv(name_lookup_url)
-    df["la name"] = df["la name"].str.lower().str.strip()
+    df["la-name"] = df["la-name"].str.lower().str.strip()
     for b in banned_words:
-        df["la name"] = df["la name"].str.replace(b, "", regex=False)
-    df["la name"] = df["la name"].apply(remove_punctuations)
-    lookup = df.set_index("la name")["local-authority-code"].to_dict()
+        df["la-name"] = df["la-name"].str.replace(b, "", regex=False)
+    df["la-name"] = df["la-name"].apply(remove_punctuations)
+    lookup = df.set_index("la-name")["local-authority-code"].to_dict()
 
     def convert(v):
         if isinstance(v, str) is False:
