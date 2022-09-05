@@ -196,7 +196,7 @@ class MSDisplayMixIn(_base):
         if "width" in args:
             args["width"] -= width_offset
             args["height"] -= height_offset
-            args["autosize"] = alt.AutoSizeParams(type="fit", contains="padding")
+            args["autosize"] = alt.AutoSizeParams(type="fit", contains="padding")  # type: ignore
 
         kwargs.update(args)
         return super().properties(**kwargs).display_options(**display_args)
