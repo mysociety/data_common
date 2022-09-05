@@ -18,6 +18,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from numpy.typing import ArrayLike
 import pandas.api as pd_api
+from pathlib import Path
 
 from . import viz
 
@@ -67,6 +68,7 @@ class Cluster:
         self.cluster_results = {}
         self.label_names = {}
         self.label_descs = {}
+        self.cluster_no_mapping = {}
 
         self.k = k
         self.normalize = normalize
@@ -130,7 +132,7 @@ class Cluster:
 
     def get_label_name(self, n, include_short=True) -> str:
 
-        short_label = n + 1
+        short_label = n
         name = self.label_names.get(self.k, {}).get(n, short_label)
         if include_short:
             if name != short_label:
@@ -138,9 +140,68 @@ class Cluster:
         return name
 
     def get_label_desc(self, n) -> str:
-        short_label = n + 1
+        short_label = n
         name = self.label_descs.get(self.k, {}).get(n, short_label)
         return name
+
+    def store_anchor(self, path: Path) -> None:
+        self.get_cluster_index().to_csv(path)
+
+    def get_cluster_index(self) -> pd.DataFrame:
+        """
+        get a dataframe of the cluster nos indexed against the dataframe
+        """
+        return pd.DataFrame(
+            {"index": self.df.index, "cluster_no": self.get_cluster_label_ids()}
+        ).set_index("index")
+
+    def set_anchor(self, anchor: pd.DataFrame | Path) -> "Cluster":
+        """
+        Sometimes we've made slight changes to the data, but want to keep the same broad labels.
+        The problem is that small changes to the data can change the cluster number order.
+        By storing an anchor from a previous version - we can sync up the anchor numbers with their best fit.
+        Without overriding the new cluster info.
+        """
+        new = copy.deepcopy(self)
+        new.cluster_no_mapping = self.map_from_anchor(anchor)
+
+        return new
+
+    def map_from_anchor(self, anchor: pd.DataFrame | Path) -> dict[int, int]:
+        """
+        given a dataframe from a previous run, try and get the cluster numbers at least mostly right
+        """
+        current = self.get_cluster_index()
+
+        if isinstance(anchor, Path):
+            anchor = pd.read_csv(anchor)
+
+        previous = anchor.set_index("index")
+
+        joined = current.join(previous, lsuffix="current", rsuffix="previous")
+
+        matrix = (
+            joined.reset_index()
+            .pivot_table(
+                "index",
+                columns="cluster_nocurrent",
+                index="cluster_noprevious",
+                aggfunc="count",
+            )
+            .fillna(0)
+        )
+
+        # iterate through all columns (current) and get the index of the max value (previosu)
+        mapping = matrix.apply(lambda x: x.sort_values(ascending=False).index[0])
+
+        if mapping.duplicated().any():
+            raise ValueError(
+                "Can't get a good mapping from past to present index numbers, disagreement on best choices."
+            )
+
+        # create mapping of the new (and possibly random numbers) to the ones we've previously assigned labels.
+
+        return mapping.to_dict()
 
     def get_label_options(self) -> list:
 
@@ -148,11 +209,13 @@ class Cluster:
 
     def get_cluster_label_ids(self) -> pd.Series:
         labels = pd.Series(self.get_clusters(self.k).labels_) + 1
+        if self.cluster_no_mapping:
+            labels = labels.map(self.cluster_no_mapping)
         return labels
 
     def get_cluster_labels(self, include_short=True) -> ArrayLike:
 
-        labels = pd.Series(self.get_clusters(self.k).labels_)
+        labels = self.get_cluster_label_ids()
 
         def f(x):
             return self.get_label_name(n=x, include_short=include_short)
@@ -164,7 +227,7 @@ class Cluster:
 
     def get_cluster_descs(self) -> ArrayLike:
 
-        labels = pd.Series(self.get_clusters(self.k).labels_)
+        labels = self.get_cluster_label_ids()
         labels = labels.apply(lambda x: self.get_label_desc(n=x))
         return np.array(labels)
 
@@ -190,8 +253,8 @@ class Cluster:
         if k not in self.label_names:
             self.label_names[k] = {}
             self.label_descs[k] = {}
-        self.label_names[k][n - 1] = name
-        self.label_descs[k][n - 1] = desc
+        self.label_names[k][n] = name
+        self.label_descs[k][n] = desc
 
     def plot(
         self,
