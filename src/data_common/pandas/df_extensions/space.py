@@ -205,7 +205,7 @@ class Cluster:
 
     def get_label_options(self) -> list:
 
-        return [self.get_label_name(x) for x in range(0, self.k)]
+        return [self.get_label_name(x) for x in range(1, self.k + 1)]
 
     def get_cluster_label_ids(self) -> pd.Series:
         labels = pd.Series(self.get_clusters(self.k).labels_) + 1
@@ -444,7 +444,6 @@ class Cluster:
         df = df.loc[lambda df: ~(df["variable"] == " ")]
         df["value"] = df["value"].astype(float)
         df = df.loc[lambda df: (df["Cluster"] == cluster_label)]
-
         df.viz.raincloud(
             values="value",
             groups="variable",
@@ -508,7 +507,6 @@ class Cluster:
                 label=cluster, sort=sort, include_data=include_data_labels
             )
             display(df)
-            return df
 
         sort_options = ["Index", "% of cluster", "% of label"]
         tool = interactive(
@@ -518,6 +516,7 @@ class Cluster:
             include_data_labels=True,
         )
         display(tool)
+        return tool
 
     def label_review(
         self,
