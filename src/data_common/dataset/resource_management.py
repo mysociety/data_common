@@ -840,6 +840,17 @@ class DataPackage:
         for r in self.resources().values():
             copyfile(r.path, self.build_path() / r.path.name)
 
+    def get_datapackage_order(self) -> int:
+        """
+        Get any priority order between the datasets
+        """
+        datapackage = self.get_datapackage()
+        if "custom" not in datapackage:
+            datapackage["custom"] = {}
+            if "dataset_order" not in datapackage["custom"]:
+                datapackage["custom"]["dataset_order"] = 999
+        return datapackage["custom"]["dataset_order"]
+
     def get_current_datapackage_json(self) -> dict[str, Any]:
         """
         Get a dictionary representation of the current datapackage
