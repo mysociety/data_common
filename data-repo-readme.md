@@ -183,7 +183,7 @@ Again, this should be rarely run manually after initial setup. For dynamic datas
 
 ## Extra notes
 
-- If you want resources to be in a specific order on the website or the Excel sheet, you can use the `sheet_order` property in the resource YAML. This expects a number and the default is 999. Otherwise, files are ordered alphabetically. 
+- If you want resources to be in a specific order on the website or the Excel sheet, you can use the `_sheet_order` property in the resource YAML. This expects a number and the default is 999. Otherwise, files are ordered alphabetically. 
 - For datapackages, `custom.dataset_order` serves the same purpose for the home page in `datapackage.yaml`.
 - If you add/remove columns from a table or change the value types, the validation will start to fail. `dataset refresh` will update with new column information, but preserve previous descriptions added (but no other manual changes). 
 - Composite downloads (xlsx, json, sqlite) do not need to contain all resources. In `datapackage.json` you can either set datasets to explicitly include or exclude from the composite. 
