@@ -2466,7 +2466,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.10,<3.11"
-content-hash = "075e681413b0771db934f293bca34853655a518f8fe8b059015d2ae40b44a606"
+content-hash = "635b93745a23a2bea6c95013eeceed10c72b3c0a9d1cf32b3a824e642dd5b341"
 
 [metadata.files]
 altair = []

@@ -44,7 +44,7 @@ pyright = "^1.1.248"
 pylint = "2.12.2"
 lxml = "^4.9.1"
 seaborn = "0.11"
-pathspec = "^0.10.1"
+pathspec = ">=0.10.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
