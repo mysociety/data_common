@@ -160,7 +160,7 @@ def collect_jekyll_data_for_package(package: dict[str, Any]):
             "title": r["name"],
             "filename": r["path"],
             "version": package["version"],
-            "full_version": package["version"],
+            "full_version": package["full_version"],
             "file": f"/data/{package['name']}/{package['version']}/{r['path']}",
         }
         download_data.update(package_level_download_options)
@@ -173,7 +173,7 @@ def collect_jekyll_data_for_package(package: dict[str, Any]):
         "title": package["name"] + "_xlsx",
         "filename": f"{package['name']}.xlsx",
         "version": package["version"],
-        "full_version": package["version"],
+        "full_version": package["full_version"],
         "file": f"/data/{package['name']}/{package['version']}/{package['name']}.xlsx",
     }
     json_data = {
@@ -183,12 +183,23 @@ def collect_jekyll_data_for_package(package: dict[str, Any]):
         "title": package["name"] + "_json",
         "filename": f"{package['name']}.json",
         "version": package["version"],
-        "full_version": package["version"],
+        "full_version": package["full_version"],
         "file": f"/data/{package['name']}/{package['version']}/{package['name']}.json",
+    }
+    sqlite_data = {
+        "name": (package["name"] + "_sqlite").replace("_", "-"),
+        "permalink": f"/downloads/{package['name']}_sqlite/{package['version'].replace('.', '_')}",
+        "package": package["name"],
+        "title": package["name"] + "_sqlite",
+        "filename": f"{package['name']}.sqlite",
+        "version": package["version"],
+        "full_version": package["full_version"],
+        "file": f"/data/{package['name']}/{package['version']}/{package['name']}.sqlite",
     }
     xlsx_data.update(package_level_download_options)
     all_resources.append(xlsx_data)
     all_resources.append(json_data)
+    all_resources.append(sqlite_data)
     return all_resources
 
 
