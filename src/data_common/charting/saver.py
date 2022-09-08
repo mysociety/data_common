@@ -181,7 +181,7 @@ class MSSaver(SeleniumSaver):
         return self._logo
 
     def _extract(self, fmt: str) -> MimebundleContent:
-        if isinstance(self._webdriver, WebDriver):
+        if isinstance(self._webdriver, WebDriver | str):
             driver = self._registry.get(self._webdriver, self._driver_timeout)
         else:
             raise ValueError("Invalid webdriver object")
@@ -218,7 +218,7 @@ class MSSaver(SeleniumSaver):
         driver.get("about:blank")
         driver.get(url)
         try:
-            driver.find_element_by_id("vis")
+            driver.find_element("id", "vis")
         except NoSuchElementException:
             raise RuntimeError(f"Could not load {url}")
         if not self._offline:

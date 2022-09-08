@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
 from typing import Iterable, Optional, Any, Type
+from bs4 import BeautifulSoup, Tag
 
 import papermill as pm  # type: ignore
 import pypandoc  # type: ignore
@@ -14,6 +15,7 @@ from ruamel import yaml  # type: ignore
 
 from . import exporters as exporters
 from .upload import g_drive_upload_and_format
+from ..dataset.jekyll_management import markdown_with_frontmatter
 
 
 def add_tag_based_on_content(input_file: Path, tag: str, content: str):
@@ -91,7 +93,7 @@ class Notebook:
                 actual_path, self.papermill_path(slug), parameters=params
             )
 
-    def rendered_filename(self, slug: str, ext: str = ".md"):
+    def rendered_filename(self, slug: str, ext: str = ".md") -> Path:
         """
         the location the html or file is output to
         """
@@ -100,6 +102,21 @@ class Notebook:
         if output_folder.exists() is False:
             output_folder.mkdir(parents=True)
         return output_folder / (self.name + ext)
+
+    def fix_html(self, filename: Path):
+        """
+        Remove unnecessary formatting from html documents
+        """
+        content = filename.read_text()
+        soup = BeautifulSoup(content, "lxml")
+        for div in soup.find_all("a", {"class": "anchor-link"}):
+            div.decompose()
+        body = soup.find("body")
+        if not isinstance(body, Tag):
+            raise ValueError("body is not being read correctly")
+        contents = body.decode_contents()
+        with open(filename, "w") as f:
+            f.write(contents)
 
     def render(self, slug: str, hide_input: bool = True):
         """
@@ -119,6 +136,7 @@ class Notebook:
             clear_and_execute=False,
             include_input=include_input,
         )
+        self.fix_html(self.rendered_filename(slug, ".html"))
 
 
 class Document:
@@ -144,7 +162,7 @@ class Document:
         this will populate/repopulate based on the currently known context
         """
         self._rendered_data = self._data.copy()
-        for m_path, items in self._data["context"].items():
+        for m_path, items in self._data.get("context", {}).items():
             mod = import_module(m_path)
             for i in items:
                 context[i] = getattr(mod, i)
@@ -214,6 +232,7 @@ class Document:
         if template.exists() is False:
             raise ValueError("Missing Template")
         reference_doc = str(template)
+        print(input_path_html)
         pypandoc.convert_file(  # type: ignore
             str(input_path_html),
             "docx",
@@ -226,35 +245,97 @@ class Document:
 
     def upload(self, context: Optional[dict[str, Any]] = None):
         """
-        Upload result to service (gdrive currently)
+        Upload result to service
         """
 
         if context:
             self.init_rendered_values(context)
 
         for k, v in self._data["upload"].items():
+            if v is None:
+                v = {}
+            if k == "readme":
+                print("Publishing to readme")
+                source_file = self.rendered_filename(".md")
+                contents = source_file.read_text().replace(
+                    "_notebook_resources", "_readme_resources"
+                )
+                readme = Path("readme.md")
+                if readme.exists() is False:
+                    raise ValueError("readme.md not found")
+                readme_contents = readme.read_text()
+                start_anchor = v.get("start", "")
+                end_anchor = v.get("end", "")
+                if start_anchor:
+                    start_text = readme_contents.find(start_anchor)
+                else:
+                    start_text = 0
+
+                if end_anchor:
+                    end_text = readme_contents.find(end_anchor, start_text)
+                else:
+                    end_text = len(readme_contents)
+                new_content = (
+                    readme_contents[: start_text + len(start_anchor)]
+                    + contents
+                    + readme_contents[end_text:]
+                )
+                with open(readme, "w") as f:
+                    f.write(new_content)
+                shutil.copytree(
+                    source_file.parent / "_notebook_resources",
+                    "_readme_resources",
+                    dirs_exist_ok=True,
+                )
             if k == "gdrive":
                 file_name = self._rendered_data["title"]
                 file_path = self.rendered_filename(".docx")
-                g_folder_id = v["g_folder_id"]
-                g_drive_id = v["g_drive_id"]
-                g_drive_upload_and_format(file_name, file_path, g_folder_id, g_drive_id)
+                g_drive_upload_and_format(
+                    file_name=file_name,
+                    file_path=file_path,
+                    drive_name=v.get("g_drive_name", None),
+                    drive_id=v.get("g_drive_id", None),
+                    folder_path=v.get("g_folder_name", None),
+                    folder_id=v.get("g_folder_id", None),
+                )
+            if k == "jekyll":
+                print("Publishing to Jekyll dir")
+                if v:
+                    front_matter = v
+                else:
+                    front_matter = {}
+                front_matter["title"] = self._rendered_data["title"]
+                analysis = Path("docs", "_analysis")
+                if analysis.exists() is False:
+                    analysis.mkdir()
+                dest = analysis / (self._rendered_data["slug"] + ".html")
+                source_file = self.rendered_filename(".html")
+                contents = source_file.read_text()
+                contents = contents.replace("_notebook_resources", "notebook_resources")
+                markdown_with_frontmatter(front_matter, dest, contents)
+                shutil.copytree(
+                    source_file.parent / "_notebook_resources",
+                    analysis / "notebook_resources",
+                    dirs_exist_ok=True,
+                )
 
 
 class DocumentCollection:
     """
-    Collection of potential documents
+    Collection of potential documents.
     In most cases there will only be one.
     """
 
     @classmethod
-    def from_yaml(
-        cls: Type[DocumentCollection], yaml_file: Path | str
-    ) -> DocumentCollection:
-        with open(yaml_file) as stream:
-            data: dict[str, Any]
-            data = yaml.safe_load(stream)  # type: ignore
-        return cls(data)
+    def from_folder(cls: Type[DocumentCollection], dir: Path) -> DocumentCollection:
+        yaml_files = dir.glob("*.yaml")
+        all_docs = {}
+        for y in yaml_files:
+            with open(y) as stream:
+                data: dict[str, Any]
+                data = yaml.safe_load(stream)  # type: ignore
+            all_docs[y.stem] = data
+        return cls(all_docs)
 
     def __init__(self, data: dict[str, Any]):
 

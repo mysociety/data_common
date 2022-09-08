@@ -177,7 +177,7 @@ class DataResource:
             lambda x: "Yes" if x.get("unique", False) else "No"
         )
         df["options"] = df["constraints"].apply(
-            lambda x: ", ".join(str(x.get("enum", [])))
+            lambda x: ", ".join([str(x) for x in x.get("enum", [])])
         )
         df = df.drop(columns=["constraints"]).rename(columns={"name": "column"})
         df = df[["column", "description", "type", "example", "unique", "options"]]
@@ -689,6 +689,8 @@ class DataPackage:
                     self.build_package()
                     self.build_missing_previous_versions()
                     render_jekyll()
+        else:
+            print(f"{new_semver} is not higher than {version} or is 0.1.0.")
 
     def store_version(self):
         """
@@ -837,6 +839,17 @@ class DataPackage:
         """
         for r in self.resources().values():
             copyfile(r.path, self.build_path() / r.path.name)
+
+    def get_datapackage_order(self) -> int:
+        """
+        Get any priority order between the datasets
+        """
+        datapackage = self.get_datapackage()
+        if "custom" not in datapackage:
+            datapackage["custom"] = {}
+            if "dataset_order" not in datapackage["custom"]:
+                datapackage["custom"]["dataset_order"] = 999
+        return datapackage["custom"]["dataset_order"]
 
     def get_current_datapackage_json(self) -> dict[str, Any]:
         """

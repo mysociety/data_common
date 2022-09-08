@@ -25,10 +25,12 @@ install(show_locals=False, width=None)
 
 def valid_packages() -> dict[str, DataPackage]:
     settings = get_settings()
-    return {
-        x.parent.stem: DataPackage(x.parent)
+    packages = [
+        (x.parent.stem, DataPackage(x.parent))
         for x in settings["dataset_dir"].glob("*/datapackage.yaml")
-    }
+    ]
+    packages.sort(key=lambda x: x[1].get_datapackage_order())
+    return dict(packages)
 
 
 from click.shell_completion import CompletionItem

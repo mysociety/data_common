@@ -1,6 +1,6 @@
 from . import theme as altair_theme
 from . import sw_theme as altair_sw_theme
-from .chart import Chart, Renderer, ChartEncoding, ChartTitle
+from .chart import Chart, Renderer, ChartEncoding, ChartTitle, LayerChart
 from .saver import MSSaver, SWSaver, render, sw_render
 
 import altair as alt
@@ -21,3 +21,8 @@ def enable_sw_charts():
     alt.renderers.register("sw_saver", sw_render)  # type: ignore
     alt.renderers.enable("sw_saver")
     Renderer.default_renderer = SWSaver
+
+
+gb_format = {"decimal": ".", "thousands": ",", "grouping": [3], "currency": ["£", ""]}
+
+alt.renderers.set_embed_options(formatLocale=gb_format)

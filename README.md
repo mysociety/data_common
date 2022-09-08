@@ -19,3 +19,14 @@ and if wanted to automatically render, add this cell code to bottom:
 render_to_markdown()
 render_to_html()
 ```
+
+## Updating common dependencies
+
+While working in a repo, if you want to update the common dependencies in the data_common repo.
+
+```
+cd src/data_common
+poetry add [package] # add package to data_common repo
+cd ../..
+poetry update # update the lock file for the current repo
+```
