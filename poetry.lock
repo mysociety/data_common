@@ -1986,7 +1986,7 @@ numpy = ">=1.17.3,<1.25.0"
 
 [[package]]
 name = "seaborn"
-version = "0.11.0"
+version = "0.11.2"
 description = "seaborn: statistical data visualization"
 category = "main"
 optional = false
@@ -2466,7 +2466,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.10,<3.11"
-content-hash = "9536361737b0fcb031e20f827a489aef772f7be263ab22f672e07b8f5e31e853"
+content-hash = "7093766c2fe2b7807447c4189391324fe5450791d7179195acf053d6953244bc"
 
 [metadata.files]
 altair = []

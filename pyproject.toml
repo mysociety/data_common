@@ -43,7 +43,7 @@ pytest = "^7.1.2"
 pyright = "^1.1.248"
 pylint = "2.12.2"
 lxml = "^4.9.1"
-seaborn = "0.11"
+seaborn = "0.11.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
