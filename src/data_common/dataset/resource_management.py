@@ -882,11 +882,10 @@ class DataPackage:
         specific_alchemer: str | None = (
             desc.get("custom", {}).get("download_options", {}).get("survey", None)
         )
-        if specific_alchemer:
+        if specific_alchemer and specific_alchemer != "default":
             survey_url = "https://survey.alchemer.com/s3/" + specific_alchemer
         else:
             survey_url = default_survey_url
-
         survey_url += "?" + urlencode(
             {"dataset_slug": self.slug, "download_link": self.url}
         )
