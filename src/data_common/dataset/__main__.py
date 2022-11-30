@@ -171,7 +171,11 @@ def version(
     auto_ban = [x.upper() for x in auto_ban]
     bump_options = ["MAJOR", "MINOR", "PATCH", "AUTO", "INITIAL", "STATIC"]
     package = get_relevant_packages(slug, all)
-    if version_or_rule in bump_options and version_or_rule not in ["AUTO", "STATIC"] and message == "":
+    if (
+        version_or_rule in bump_options
+        and version_or_rule not in ["AUTO", "STATIC"]
+        and message == ""
+    ):
         raise ValueError("Message required to bump version manually")
 
     for p in package:
