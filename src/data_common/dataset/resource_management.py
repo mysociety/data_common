@@ -355,7 +355,7 @@ class DataPackage:
         Parameters
         ----------
         bump_rule : str
-            The bump rule to use. Must be one of "MAJOR", "MINOR", "PATCH", "INITIAL",
+            The bump rule to use. Must be one of "MAJOR", "MINOR", "PATCH", "INITIAL", "STATIC",
             or "AUTO".
 
         Raises
@@ -363,10 +363,11 @@ class DataPackage:
         ValueError
             If the given bump rule is not valid.
         """
-        if bump_rule not in ["MAJOR", "MINOR", "PATCH", "INITIAL", "AUTO"]:
+        if bump_rule not in ["MAJOR", "MINOR", "PATCH", "INITIAL", "AUTO", "STATIC"]:
             raise ValueError(f"{bump_rule} is not a valid bump_rule")
         current_version = self.get_current_version()
-        if bump_rule == "AUTO":
+        force_static = bump_rule == "STATIC"
+        if bump_rule in ["AUTO", "STATIC"]:
             bump_results = self.derive_bump_rule_from_change()
             if bump_results:
                 bump_rule, auto_update_message = bump_results
@@ -381,10 +382,21 @@ class DataPackage:
                 return None
         if bump_rule == "INITIAL":
             new_version = current_version
+        elif force_static:
+            rich.print(
+                "[blue]Changes detected, but static rule means overriding current version[/blue]"
+            )
+            new_version = current_version
         else:
             new_version = bump_version(current_version, bump_rule.lower())
 
         self.bump_version_to(new_version, update_message, dry_run, publish=publish)
+        if force_static and publish:
+            rich.print("[blue]Republishing anyway, because static setting used[/blue]")
+            self.rebuild_all_resources()
+            self.build_package()
+            self.build_missing_previous_versions()
+            render_jekyll()
 
     def previous_versions(self) -> list[str]:
         """
