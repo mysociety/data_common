@@ -238,6 +238,10 @@ class DataResource:
         yaml_str = yaml_str.replace(": No\n", ": 'No'\n")
         yaml_str = yaml_str.replace(": Yes\n", ": 'Yes'\n")
 
+	# and in enums
+	yaml_str = yaml_str.replace("- No\n", "- 'No'\n")
+	yaml_str = yaml_str.replace("- Yes\n", "- 'Yes'\n")
+
         with open(self.resource_path, "w") as f:
             f.write(yaml_str)
         print(f"Updated config for {self.slug} to {self.resource_path}")
