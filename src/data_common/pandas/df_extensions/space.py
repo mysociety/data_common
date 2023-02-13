@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from IPython.display import HTML, display
+from IPython.display import display
+from IPython.core.display import HTML
 from ipywidgets import fixed, interact, interact_manual, interactive
 from matplotlib.colors import Colormap
 from data_common.charting.theme import mysoc_palette_colors

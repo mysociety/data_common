@@ -12,13 +12,12 @@ from bs4 import BeautifulSoup
 from htmltabletomd import convert_table
 from ipython_genutils.text import indent as normal_indent
 from nbconvert import HTMLExporter, MarkdownExporter
-from nbconvert.preprocessors import (
-    ClearMetadataPreprocessor,
-    ClearOutputPreprocessor,
-    ExecutePreprocessor,
-    ExtractOutputPreprocessor,
-    Preprocessor,
-)
+from nbconvert.preprocessors.clearmetadata import ClearMetadataPreprocessor
+from nbconvert.preprocessors.clearoutput import ClearOutputPreprocessor
+from nbconvert.preprocessors.execute import ExecutePreprocessor
+from nbconvert.preprocessors.extractoutput import ExtractOutputPreprocessor
+from nbconvert.preprocessors.base import Preprocessor
+
 from traitlets.config import Config  # type: ignore
 
 notebook_render_dir = "_notebook_resources"

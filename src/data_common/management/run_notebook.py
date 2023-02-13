@@ -1,5 +1,5 @@
 import nbformat
-from nbconvert.preprocessors import ExecutePreprocessor
+from nbconvert.preprocessors.execute import ExecutePreprocessor
 from pathlib import Path
 
 
