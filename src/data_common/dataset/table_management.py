@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, TypedDict
 
 import pandas as pd
 from pandas.io.json import build_table_schema
+from data_common.db import duck_query
 
 
 class TypedFieldSchema(TypedDict):
@@ -104,7 +105,13 @@ class Schema:
 def update_table_schema(
     path: Path, existing_schema: SchemaValidator | None
 ) -> SchemaValidator:
-    df = pd.read_csv(path)
+
+    if path.suffix == ".csv":
+        df = pd.read_csv(path)
+    elif path.suffix == ".parquet":
+        df = pd.read_parquet(path)
+    else:
+        raise ValueError(f"Unsupported file type {path.suffix}")
 
     # get columns that have less than 15 unique entries and have no blank entries
     cols = df.apply(lambda x: x.nunique() < 15 and not x.isnull().any())

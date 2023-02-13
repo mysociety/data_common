@@ -30,6 +30,27 @@ def markdown_with_frontmatter(
             f.write(content)
 
 
+def render_download_format_to_dir(items: list[dict[str, Any]], output_dir: Path):
+
+    if output_dir.exists() is False:
+        output_dir.mkdir()
+    # remove existing files
+    for e in output_dir.glob("*/*.md"):
+        e.unlink()
+
+    for dataset in items:
+        for data_format in dataset["custom"].get(
+            "formats", {"csv": True, "parquet": True}
+        ):
+            resources = collect_jekyll_data_for_package(dataset, data_format)
+            for r in resources:
+                datapackage_path = output_dir / f"{r['name']}"
+                if datapackage_path.exists() is False:
+                    datapackage_path.mkdir()
+                markdown_file = datapackage_path / f"{dataset['version']}.md"
+                markdown_with_frontmatter(r, markdown_file)
+
+
 def render_sources_to_dir(items: list[dict[str, Any]], output_dir: Path):
 
     if output_dir.exists() is False:
@@ -117,11 +138,6 @@ def collect_jekyll_data():
 
     all_packages = [grab_version(d) for d in data_dir.glob("*/*/datapackage.json")]
 
-    resources = []
-
-    for a in all_packages:
-        resources.extend(collect_jekyll_data_for_package(a))
-
     render_sources_to_dir(
         all_packages, output_dir=get_settings()["publish_dir"] / "_datasets"
     )
@@ -130,12 +146,14 @@ def collect_jekyll_data():
         all_packages, output_dir=get_settings()["publish_dir"] / "_versionlists"
     )
 
-    render_sources_to_dir(
-        resources, output_dir=get_settings()["publish_dir"] / "_downloads"
+    render_download_format_to_dir(
+        all_packages, output_dir=get_settings()["publish_dir"] / "_downloads"
     )
 
 
-def collect_jekyll_data_for_package(package: dict[str, Any]):
+def collect_jekyll_data_for_package(
+    package: dict[str, Any], download_format: str = "csv"
+):
     """
     Collect information from data packages published to Jekyll
     into the data directory where it can access them
@@ -157,7 +175,12 @@ def collect_jekyll_data_for_package(package: dict[str, Any]):
         if header_text != "default":
             package_level_download_options["download_form_header"] = header_text
     for r in package["resources"]:
-        r["download_id"] = "_".join([package["name"], r["name"]]).replace("_", "-")
+        r["download_id"] = "_".join(
+            [package["name"], r["name"], download_format]
+        ).replace("_", "-")
+        # get everything before final dot
+        path_stem = r["path"][: r["path"].rfind(".")]
+        path_file = path_stem + "." + download_format
         download_data = {
             "name": r["download_id"],
             "permalink": "/downloads/"
@@ -166,10 +189,10 @@ def collect_jekyll_data_for_package(package: dict[str, Any]):
             + package["version"].replace(".", "_"),
             "package": package["name"],
             "title": r["name"],
-            "filename": r["path"],
+            "filename": path_file,
             "version": package["version"],
             "full_version": package["full_version"],
-            "file": f"/data/{package['name']}/{package['version']}/{r['path']}",
+            "file": f"/data/{package['name']}/{package['version']}/{path_file}",
         }
         download_data.update(package_level_download_options)
         all_resources.append(download_data)

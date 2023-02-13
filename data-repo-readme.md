@@ -59,7 +59,7 @@ This repo uses:
 
 Black and Pyright are enforced by `script/test`. This should in many cases be undemanding, but can be disabled by modifying it from the `script/test` file.
 
-See also the general [mySociety coding standards](https://mysociety.github.io/coding-standards.html). 
+See also the general [mySociety coding standards](https://pages.mysociety.org/coding-standards.html). 
 
 # Dataset management
 

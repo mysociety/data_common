@@ -24,6 +24,8 @@ from rich.markdown import Markdown
 from rich.table import Table
 from ruamel.yaml import YAML
 
+from data_common.db import duck_query
+
 from .jekyll_management import render_jekyll
 from .rich_assist import PanelPrint, df_to_table
 from .settings import get_settings
@@ -151,6 +153,19 @@ class DataResource:
             return valid_check["tasks"][0]["errors"], "red"
         return "Valid resource", "green"
 
+    def get_df(self) -> pd.DataFrame:
+        """
+        Get a dataframe of the resource
+        """
+        # if is csv
+        if self.path.suffix == ".csv":
+            return pd.read_csv(self.path)
+        # if parquet
+        elif self.path.suffix == ".parquet":
+            return pd.read_parquet(self.path)
+        else:
+            raise ValueError(f"Unhandled file type {self.path.suffix}")
+
     def get_resource(self, inline_data: bool = False) -> dict[str, Any]:
 
         if self.has_resource_yaml:
@@ -159,7 +174,7 @@ class DataResource:
                 resource = yaml.load(f)
             if inline_data:
                 resource["data"] = (
-                    pd.read_csv(self.path).fillna(value="").to_dict(orient="records")
+                    self.get_df().fillna(value="").to_dict(orient="records")
                 )
                 resource["format"] = "json"
                 del resource["scheme"]
@@ -208,15 +223,16 @@ class DataResource:
 
         resource_path = self.path
         # resource must be csv
-        if resource_path.suffix != ".csv":
+        if resource_path.suffix not in [".csv", ".parquet"]:
             raise ValueError(
-                "Resource must be csv, update this function if extending past that."
+                "Resource must be csv or paraquet, update this function if extending past that."
             )
 
         # get number of rows in resource
 
-        with open(resource_path, "r") as f:
-            rows = len(f.readlines()) - 1
+        rows = duck_query(
+            "SELECT COUNT(*) FROM {{ file_path }}", file_path=resource_path
+        ).int()
 
         # update number of rows in resource (custom)
         new_dict["custom"]["row_count"] = rows
@@ -744,8 +760,16 @@ class DataPackage:
             raise ValueError(f"No datapackage.yaml found in {self.path}")
 
     def resources(self) -> dict[str, DataResource]:
-
+        # a resource can be a csv or a parquet file
         resources = [DataResource(path=x) for x in self.path.glob("*.csv")]
+        resources += [DataResource(path=x) for x in self.path.glob("*.parquet")]
+
+        # check there aren't any csvs and paraquets with the same name
+        if len(set([x.path.stem for x in resources])) != len(resources):
+            raise ValueError(
+                f"Found multiple resources with the same name in {self.path}"
+            )
+
         resources.sort(key=lambda x: x.slug)
         resources.sort(key=lambda x: x.get_order())
         return {x.slug: x for x in resources}
@@ -851,10 +875,36 @@ class DataPackage:
 
     def copy_resources(self):
         """
-        Copy the CSVs over
+        Copy the CSV/parquet over and create the opposite item.
+        Use DUCKDB to make the conversion robust for larger files.
         """
+
+        desc = self.get_datapackage()
+        csv_value = desc.get("custom", {}).get("formats", {}).get("csv", True)
+        parquet_value = desc.get("custom", {}).get("formats", {}).get("parquet", True)
+
+        csv_copy_query = """
+        copy (select * from {{ source }}) to {{ dest }} (format PARQUET);
+        """
+
+        parquet_copy_query = """
+        copy (select * from {{ source }}) to {{ dest }} (HEADER, DELIMITER ',');
+        """
+
         for r in self.resources().values():
-            copyfile(r.path, self.build_path() / r.path.name)
+            # need to have seperate handling for csv and paraquet
+            if r.path.suffix == ".csv":
+                if csv_value:
+                    copyfile(r.path, self.build_path() / r.path.name)
+                if parquet_value:
+                    parquet_file = self.build_path() / (r.path.stem + ".parquet")
+                    duck_query(csv_copy_query, source=r.path, dest=parquet_file)
+            elif r.path.suffix == ".parquet":
+                if parquet_value:
+                    copyfile(r.path, self.build_path() / r.path.name)
+                if csv_value:
+                    csv_file = self.build_path() / (r.path.stem + ".csv")
+                    duck_query(parquet_copy_query, source=r.path, dest=csv_file)
 
     def get_datapackage_order(self) -> int:
         """
@@ -1055,13 +1105,14 @@ class DataPackage:
 
         for slug, resource in self.resources().items():
             if slug in allowed_resource_slugs:
-                sheets[slug] = pd.read_csv(resource.path)
+                sheets[slug] = resource.get_df()
                 sheets[slug + "_metadata"] = resource.get_metadata_df()
 
         excel_path = self.build_path() / f"{self.slug}.xlsx"
 
         writer = pd.ExcelWriter(excel_path)
         writer = self.build_coversheet(writer, allowed_sheets=allowed_resource_slugs)
+        text_wrap = writer.book.add_format({"text_wrap": True})
 
         for sheet_name, df in sheets.items():
             short_sheet_name = sheet_name[-31:]  # only allow 31 characters
@@ -1070,10 +1121,18 @@ class DataPackage:
             for column in df:
                 column_length = max(df[column].astype(str).map(len).max(), len(column))
                 column_length += 4
+
                 col_idx = df.columns.get_loc(column)
-                writer.sheets[short_sheet_name].set_column(
-                    col_idx, col_idx, column_length
-                )
+                if column_length <= 50:
+
+                    writer.sheets[short_sheet_name].set_column(
+                        col_idx, col_idx, column_length
+                    )
+                else:  # word wrap
+                    writer.sheets[short_sheet_name].set_column(
+                        col_idx, col_idx, 50, text_wrap
+                    )
+
         writer.save()
 
     def build_sqlite(self):
@@ -1099,7 +1158,7 @@ class DataPackage:
         for slug, resource in self.resources().items():
             if slug not in allowed_resource_slugs:
                 continue
-            sheets[slug] = pd.read_csv(resource.path)
+            sheets[slug] = resource.get_df()
             meta_df = resource.get_metadata_df()
             meta_df["resource"] = slug
             metadata.append(meta_df)

@@ -28,6 +28,9 @@ custom:
     gate: default
     survey: default
     header_text: default
+  formats:
+    csv: true
+    parquet: true
   composite:
     xlsx:
       include: all
