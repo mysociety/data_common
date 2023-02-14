@@ -134,6 +134,8 @@ def collect_jekyll_data():
         data["permalink"] = (
             "/datasets/" + data["name"] + "/" + data["version"].replace(".", "_")
         )
+        if "formats" not in data["custom"]:
+            data["custom"]["formats"] = {"csv": True, "parquet": True}
         return data
 
     all_packages = [grab_version(d) for d in data_dir.glob("*/*/datapackage.json")]
