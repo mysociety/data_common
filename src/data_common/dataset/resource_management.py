@@ -257,6 +257,8 @@ class DataResource:
         # and in enums
         yaml_str = yaml_str.replace("- No\n", "- 'No'\n")
         yaml_str = yaml_str.replace("- Yes\n", "- 'Yes'\n")
+        yaml_str = yaml_str.replace("- no\n", "- 'no'\n")
+        yaml_str = yaml_str.replace("- yes\n", "- 'yes'\n")
 
         with open(self.resource_path, "w") as f:
             f.write(yaml_str)
