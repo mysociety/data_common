@@ -331,7 +331,7 @@ class Cluster:
         """
         fetch k means results for this cluster
         """
-        km = KMeans(n_clusters=k, random_state=self.default_seed)
+        km = KMeans(n_clusters=k, random_state=self.default_seed, n_init=10)
         return km.fit(self.df)
 
     def get_clusters(self, k: int):
@@ -568,7 +568,7 @@ class Cluster:
         k = self.k
         df = self.source_df.copy()
         df["label"] = self.get_cluster_labels(include_short=False)
-        df["label_id"] = self.get_cluster_label_ids()
+        df["label_id"] = pd.Series(self.get_clusters(self.k).labels_, index=df.index) + 1
         df["label_desc"] = self.get_cluster_descs()
         return df
 
@@ -605,7 +605,7 @@ class Cluster:
             ax.scatter(df[x_var], df[y_var], df[z_var], c=labels)
             ax.set_xlabel(self._axis_label(x_var))
             ax.set_ylabel(self._axis_label(y_var))
-            ax.set_zlabel(self._axis_label(z_var))
+            ax.set_zlabel(self._axis_label(z_var)) # type: ignore
             plt.title(f"Data with {k} clusters")
 
         plt.show()
