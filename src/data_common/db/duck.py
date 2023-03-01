@@ -1,11 +1,12 @@
-import duckdb
-from typing import Any
-import jinja2
-from pathlib import Path
+import inspect
 from functools import lru_cache
-import toml
+from pathlib import Path
+from typing import Any, Literal
+
+import duckdb
+import jinja2
 import pandas as pd
-from typing import Any
+import toml
 
 
 @lru_cache
@@ -69,44 +70,116 @@ class DuckResponse:
         return self.fetch_float()
 
 
+class DuckUrl:
+    def __init__(self, url: str, file_format: Literal["csv", "parquet"] | None = None):
+        # check is https
+        if not url.startswith("https://"):
+            raise ValueError("URL must start with https://")
+        self.url = url
+        if file_format:
+            self.format = file_format
+        else:
+            self.format = url.split(".")[-1]
+
+    def __str__(self) -> str:
+        return self.url
+
+    # if a divide operattor used, treat like pathlib's Path
+    def __truediv__(self, other: str) -> "DuckUrl":
+        # check and remove a trailing slash
+        if self.url.endswith("/"):
+            url = self.url[:-1]
+        else:
+            url = self.url
+        return DuckUrl(f"{url}/{other}")
+
+
+class DuckQuery:
+    def __init__(self):
+        self.ddb = duckdb.connect(":memory:")
+        self.https: bool = False
+
+    def activate_https(self) -> None:
+        if self.https is False:
+            self.ddb.execute("install httpfs; load httpfs")
+
+    def register(self, name: str, item: pd.DataFrame | DuckUrl | Path) -> "DuckQuery":
+
+        if isinstance(item, DuckUrl):
+            self.activate_https()
+            self.ddb.execute(
+                f"CREATE OR REPLACE VIEW {name} AS SELECT * FROM '{str(item)}'"
+            )
+        elif isinstance(item, Path):
+            self.ddb.execute(
+                f"CREATE OR REPLACE VIEW {name} AS SELECT * FROM '{str(item)}'"
+            )
+        elif isinstance(item, pd.DataFrame):
+            self.ddb.register(name, item)
+
+        return self
+
+    def add_view(self, name: str, query: str) -> "DuckQuery":
+        self.ddb.execute(f"CREATE OR REPLACE VIEW {name} AS {query}")
+        return self
+
+    def query(
+        self, query: str | Path, store_as: str | None = None, **kwargs: Any
+    ) -> DuckResponse:
+        """
+        Execute a query
+        """
+
+        # if the query is a path, read it in
+        if isinstance(query, Path) or query.endswith(".sql"):
+            path = Path(query)
+            if not path.exists():
+                query_path = get_settings()["query_dir"]
+                path = Path(query_path, query)
+                if not path.exists():
+                    raise ValueError(f"Could not find query file {query}")
+            query = path.read_text()
+
+        def wrap_str(s: str) -> str:
+            return f"'{s}'"
+
+        def process_kwarg(key: str, value: Any) -> Any:
+            # convert path to string in single quotes
+            if isinstance(value, Path):
+                return wrap_str(str(value))
+            if isinstance(value, DuckUrl):
+                self.activate_https()
+                return wrap_str(str(value))
+            if isinstance(value, pd.DataFrame):
+                self.ddb.register(key, value)
+                return key
+
+            return value
+
+        if kwargs:
+            env = jinja2.Environment()
+            template = env.from_string(query)
+
+            args = {k: process_kwarg(k, v) for k, v in kwargs.items()}
+
+            rendered_query = template.render(**args)
+        else:
+            rendered_query = query
+
+        if store_as:
+            self.ddb.execute(f"CREATE OR REPLACE VIEW {store_as} AS {rendered_query}")
+            response = self.ddb.execute(f"SELECT * FROM {store_as}")
+        else:
+            response = self.ddb.execute(rendered_query)
+        return DuckResponse(response)
+
+
 def duck_query(query: str | Path, **kwargs: Any) -> DuckResponse:
     """
     Helper function to execute a query using duckdb.
     """
-
-    ddb = duckdb.connect(":memory:")
-
-    # if the query is a path, read it in
-    if isinstance(query, Path) or query.endswith(".sql"):
-        path = Path(query)
-        if not path.exists():
-            query_path = get_settings()["query_dir"]
-            path = Path(query_path, query)
-            if not path.exists():
-                raise ValueError(f"Could not find query file {query}")
-        query = path.read_text()
-
-    def wrap_str(s: str) -> str:
-        return f"'{s}'"
-
-    def process_kwarg(key: str, value: Any) -> Any:
-        # convert path to string in single quotes
-        if isinstance(value, Path):
-            return wrap_str(str(value))
-        # register any dataframes passed in
-        if isinstance(value, pd.DataFrame):
-            ddb.register(key, value)
-            return key
-
-        return value
-
-    template = jinja2.Environment().from_string(query)
-
-    args = {k: process_kwarg(k, v) for k, v in kwargs.items()}
-
-    rendered_query = template.render(**args)
-    response = ddb.execute(rendered_query)
-    return DuckResponse(response)
+    duck = DuckQuery()
+    return duck.query(query, **kwargs)
 
 
 def gather_parquet(input_file: Path, output_file: Path) -> int:
