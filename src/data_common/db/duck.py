@@ -1,7 +1,7 @@
 import inspect
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Callable
 
 import duckdb
 import jinja2
@@ -30,14 +30,36 @@ def get_settings(toml_file: str = "pyproject.toml") -> dict:
 
 
 class DuckResponse:
-    def __init__(self, response: duckdb.DuckDBPyConnection):
-        self.response = response
+    def __init__(self, duck: "DuckQuery", query: str):
+        self._duck = duck
+        self._query = query
+        self._response = None
+
+    @property
+    def response(self) -> duckdb.DuckDBPyConnection:
+        if self._response is None:
+            self._response = self.get_response()
+        return self._response
+
+    def get_response(self) -> duckdb.DuckDBPyConnection:
+        return self._duck.ddb.execute(self._query)
 
     def __iter__(self):
         return iter(self.response.fetchall())
 
+    def to_view(self, name: str) -> "DuckResponse":
+        self._duck.add_view(name, self._query)
+        return self
+
     def df(self) -> pd.DataFrame:
         return self.response.df()
+    
+    def debug_df(self, additional_query: str = "") -> pd.DataFrame:
+        """
+        Render the result of a query with additional options (like a limit)
+        """
+        query = f"{self._query} {additional_query}"
+        return self._duck.query(query).df()
 
     def fetchone(self) -> Any:
         return self.response.fetchone()[0]  # type: ignore
@@ -68,6 +90,12 @@ class DuckResponse:
 
     def float(self) -> float:
         return self.fetch_float()
+
+    def run(self) -> None:
+        """
+        Execute but return nothing
+        """
+        self.get_response()
 
 
 class DuckUrl:
@@ -168,10 +196,24 @@ class DuckQuery:
 
         if store_as:
             self.ddb.execute(f"CREATE OR REPLACE VIEW {store_as} AS {rendered_query}")
-            response = self.ddb.execute(f"SELECT * FROM {store_as}")
-        else:
-            response = self.ddb.execute(rendered_query)
-        return DuckResponse(response)
+            rendered_query = f"SELECT * FROM {store_as}"
+        return DuckResponse(self, rendered_query)
+    
+    def macro(self, func: Callable[..., str]) -> None:
+        # get function name
+        name = func.__name__
+        # get arguments
+        args = func.__code__.co_varnames[:func.__code__.co_argcount]
+        # give dummy values for all arguments and get the string contents
+        query = func(*[1 for _ in args])
+        # register the macro
+
+        macro_query = f"""
+        CREATE OR REPLACE MACRO {name}({", ".join(args)}) AS
+        {query}
+        """
+        self.query(macro_query).run()
+
 
 
 def duck_query(query: str | Path, **kwargs: Any) -> DuckResponse:
