@@ -154,6 +154,11 @@ def detail(slug: str = "", all: bool = False):
     is_flag=True,
     help="If there is a version change, run publish afterwards",
 )
+@click.option(
+    "--prerelease",
+    is_flag=True,
+    help="prerelease string to exclude from normal release flow",
+)
 @slug_command
 @all_command
 def version(
@@ -164,10 +169,13 @@ def version(
     auto_ban: list[str] = [],
     dry_run: bool = False,
     publish: bool = False,
+    prerelease: str = "",
 ):
     """Change the packages version if valid semvar, or bumps automatically if one of MAJOR MINOR PATCH AUTO"""
     if version_or_rule is None:
         version_or_rule = "DISPLAY"
+    if "-" in version_or_rule:
+        version_or_rule, prerelease = version_or_rule.split("-")
     auto_ban = [x.upper() for x in auto_ban]
     bump_options = ["MAJOR", "MINOR", "PATCH", "AUTO", "INITIAL", "STATIC"]
     package = get_relevant_packages(slug, all)
@@ -190,7 +198,7 @@ def version(
                 publish=publish,
             )
         elif is_valid_semver(version_or_rule):
-            p.bump_version_to(version_or_rule, message, publish)
+            p.bump_version_to(version_or_rule, message, publish, prerelease=prerelease)
 
         else:
             raise ValueError(f"Not a valid semvar or bump rule: {version_or_rule}")

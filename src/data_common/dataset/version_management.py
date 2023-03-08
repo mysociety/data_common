@@ -10,7 +10,10 @@ def map_versions_to_latest_major_minor(
     to the latest relevant full version
     """
     version_map = {}
-    split_versions = [x.split(".") for x in versions]
+
+    split_versions = [
+        x.split(".") for x in versions if "-" not in x
+    ]  # exclude prerelease versions from latest versions
     split_versions = [(int(x), int(y), int(z)) for x, y, z in split_versions]
     split_versions.sort()
 
