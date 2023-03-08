@@ -156,7 +156,6 @@ def detail(slug: str = "", all: bool = False):
 )
 @click.option(
     "--prerelease",
-    is_flag=True,
     help="prerelease string to exclude from normal release flow",
 )
 @slug_command
@@ -198,7 +197,13 @@ def version(
                 publish=publish,
             )
         elif is_valid_semver(version_or_rule):
-            p.bump_version_to(version_or_rule, message, publish, prerelease=prerelease)
+            p.bump_version_to(
+                new_semver=version_or_rule,
+                update_message=message,
+                dry_run=dry_run,
+                publish=publish,
+                prerelease=prerelease,
+            )
 
         else:
             raise ValueError(f"Not a valid semvar or bump rule: {version_or_rule}")
