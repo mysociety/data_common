@@ -75,7 +75,10 @@ def get_la_df(
             (get_date_from_from_string(df["start-date"]) < as_of_date)  # type: ignore
             | df["start-date"].isna()
         ]
-        # blank out any end dates after as_of_date
+        # blank out any replaced-by and end dates after as_of_date
+        df.loc[
+            get_date_from_from_string(df["end-date"]) >= as_of_date, "replaced-by"  # type: ignore
+        ] = np.nan
         df.loc[
             get_date_from_from_string(df["end-date"]) >= as_of_date, "end-date"  # type: ignore
         ] = np.nan
