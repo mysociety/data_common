@@ -987,7 +987,8 @@ class DataPackage:
         if "licenses" in desc:
             ws.write(5, 2, "Licence", bold)
             for n, licence in enumerate(desc["licenses"]):
-                ws.write_url(5, 3 + n, licence["path"], string=licence["title"])
+                if "path" in licence:
+                    ws.write_url(5, 3 + n, licence["path"], string=licence["title"])
         if "version" in desc:
             ws.write(6, 2, "Version", bold)
             ws.write(6, 3, self.get_current_version())
