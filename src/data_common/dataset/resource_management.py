@@ -18,6 +18,8 @@ import pandas as pd
 import pytest
 import rich
 import xlsxwriter
+import re
+
 from frictionless import Schema, describe, validate
 from pyparsing import any_open_tag
 from rich.markdown import Markdown
@@ -328,7 +330,7 @@ class DataPackage:
         """
         desc = self.get_datapackage()
         build_module = desc.get("custom", {}).get("build", "")
-        build_module = build_module.strip()
+        build_module = build_module.strip() if build_module else ""
         if not build_module:
             rich.print(
                 "[red]No build command or python path specified in custom.build in the yaml[/red]"
@@ -693,9 +695,15 @@ class DataPackage:
         update_message: str,
         dry_run: bool = False,
         publish: bool = False,
+        prerelease: str = "",
     ):
         version = self.get_current_version()
         desc = self.get_datapackage()
+        # check if prerelease is valid format, only ASCII alphanumerics and hyphens
+        if prerelease and not re.match(r"^[a-zA-Z0-9-]+$", prerelease):
+            raise ValueError("Prerelease must be ASCII alphanumerics and hyphens")
+        if prerelease:
+            new_semver = f"{new_semver}-{prerelease}"
         if is_valid_semver(new_semver) is False:
             raise ValueError(f"{new_semver} is not valid semver")
         if semver_is_higher(version, new_semver) or new_semver == "0.1.0":
@@ -979,7 +987,8 @@ class DataPackage:
         if "licenses" in desc:
             ws.write(5, 2, "Licence", bold)
             for n, licence in enumerate(desc["licenses"]):
-                ws.write_url(5, 3 + n, licence["path"], string=licence["title"])
+                if "path" in licence:
+                    ws.write_url(5, 3 + n, licence["path"], string=licence["title"])
         if "version" in desc:
             ws.write(6, 2, "Version", bold)
             ws.write(6, 3, self.get_current_version())

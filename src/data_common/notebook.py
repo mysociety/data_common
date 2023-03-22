@@ -32,6 +32,9 @@ from .management.exporters import render_to_html, render_to_markdown
 from .management.settings import settings
 from .progress import Progress, track_progress
 
+
+GovLayers = la.GovLayers
+
 builtin_print = __builtin__.print
 
 pd.options.mode.chained_assignment = None

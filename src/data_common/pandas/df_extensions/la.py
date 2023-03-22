@@ -8,8 +8,17 @@ from functools import lru_cache, partial, wraps
 from typing import Callable, List, Optional, overload, Literal
 from data_common.dataset import get_dataset_url
 import numpy as np
+from datetime import datetime, date
 
 import pandas as pd
+
+la_lookup_url_future = get_dataset_url(
+    repo="uk_local_authority_names_and_codes",
+    package="uk_la_future",
+    version="1",
+    file="uk_local_authorities_future.csv",
+)
+
 
 la_lookup_url = get_dataset_url(
     repo="uk_local_authority_names_and_codes",
@@ -43,12 +52,43 @@ def cache_and_wrap(func):
     return inner
 
 
+def get_date_from_from_string(dates: pd.Series) -> pd.Series:
+    """
+    convert a series of dates in the format YYYY-MM-DD to a series of
+    dates
+    """
+    return pd.to_datetime(dates).dt.date
+
+
 @cache_and_wrap
-def get_la_df(include_historical: bool = False) -> pd.DataFrame:
+def get_la_df(
+    include_historical: bool = False, as_of_date: Optional[date] = None
+) -> pd.DataFrame:
     """
     retrieve the big grid of all local authority details from the repo
     """
-    df = pd.read_csv(la_lookup_url)
+    if as_of_date:
+        df = pd.read_csv(la_lookup_url_future)
+
+        # remove any with a start date after as_of_date
+        df = df.loc[
+            (get_date_from_from_string(df["start-date"]) < as_of_date)  # type: ignore
+            | df["start-date"].isna()
+        ]
+        # blank out any replaced-by and end dates after as_of_date
+        df.loc[
+            get_date_from_from_string(df["end-date"]) >= as_of_date, "replaced-by"  # type: ignore
+        ] = np.nan
+        df.loc[
+            get_date_from_from_string(df["end-date"]) >= as_of_date, "end-date"  # type: ignore
+        ] = np.nan
+        df["current-authority"] = df["end-date"].isna() & (
+            df["start-date"].isna()
+            | (get_date_from_from_string(df["start-date"]) < as_of_date)  # type: ignore
+            # set the current-authority correctly
+        )
+    else:
+        df = pd.read_csv(la_lookup_url)
     if include_historical is False:
         df = df.loc[df["end-date"].isnull()]
     return df
@@ -110,13 +150,13 @@ def name_registry_lookup(allow_none: bool = False) -> Callable:
     return convert
 
 
-@pd.api.extensions.register_dataframe_accessor("la")  # type: ignore
-class LocalAuthorityDataFrameManipulator(object):
+# type: ignore
+class GovLayers:
     """
     extention to pandas dataframe
     """
 
-    def __init__(self, pandas_obj):
+    def __init__(self, pandas_obj: pd.DataFrame):
         self._obj = pandas_obj
 
     def get_council_info(
@@ -124,6 +164,7 @@ class LocalAuthorityDataFrameManipulator(object):
         items: Optional[List[str]] = None,
         merge_type: str = "left",
         include_historical: bool = False,
+        as_of_date: Optional[date] = None,
     ) -> pd.DataFrame:
         """
         retrieve columns from comparison LA spreadsheet.
@@ -134,7 +175,7 @@ class LocalAuthorityDataFrameManipulator(object):
         df = self._obj
         if "local-authority-code" not in df.columns:
             df = df.la.create_code_column()
-        adf = get_la_df(include_historical=include_historical)
+        adf = get_la_df(include_historical=include_historical, as_of_date=as_of_date)
         if items:
             adf = adf[["local-authority-code"] + items]
         return df.merge(adf, how=merge_type)
@@ -151,7 +192,7 @@ class LocalAuthorityDataFrameManipulator(object):
             added = True
         lower_mask = ~df["local-authority-type"].isin(higher_codes)
         if added:
-            df = df.drop(columns=["local-authority-type"])
+            df = df.drop(columns=["local-authority-type"])  # type: ignore
         return df.loc[lower_mask]
 
     def create_code_column(
@@ -202,6 +243,7 @@ class LocalAuthorityDataFrameManipulator(object):
         weight_on: Optional[str] = None,
         comparison_column: str = "replaced-by",
         upgrade_absent: bool = True,
+        as_of_date: Optional[date] = None,
     ) -> pd.DataFrame:
         """
         If given values by primary authority, this may be former authorities.
@@ -220,14 +262,13 @@ class LocalAuthorityDataFrameManipulator(object):
         if weight_on:
 
             def func(x):
-                return np.average(x, weights=df.loc[x.index, weight_on])
+                return np.average(x, weights=df.loc[x.index, weight_on])  # type: ignore
 
             aggfunc = func
 
             cols_to_fetch.append(weight_on)
         df = df.la.get_council_info(
-            cols_to_fetch,
-            include_historical=True,
+            cols_to_fetch, include_historical=True, as_of_date=as_of_date
         )
         if weight_on:
             df[weight_on] = df[weight_on].fillna(1)
@@ -252,6 +293,7 @@ class LocalAuthorityDataFrameManipulator(object):
         weight_on: Optional[str] = None,
         comparison_column: str = "county-la",
         upgrade_absent: bool = False,
+        as_of_date: Optional[date] = None,
     ) -> pd.DataFrame:
         """
         If given values by primary authority, we may want the overlapping authorities
@@ -263,7 +305,7 @@ class LocalAuthorityDataFrameManipulator(object):
         Good values are 'pop_2020' or 'area'
         """
         return self.to_current(
-            columns, aggfunc, weight_on, comparison_column, upgrade_absent
+            columns, aggfunc, weight_on, comparison_column, upgrade_absent, as_of_date
         )
 
     def to_multiple_higher(
@@ -273,6 +315,7 @@ class LocalAuthorityDataFrameManipulator(object):
         weight_on: Optional[str] = None,
         higher_levels: Optional[List[str]] = ["county-la", "combined-authority"],
         upgrade_absent: bool = False,
+        as_of_date: Optional[date] = None,
     ) -> pd.DataFrame:
         """
         If given values by primary authority, we may want the
@@ -295,6 +338,7 @@ class LocalAuthorityDataFrameManipulator(object):
             aggfunc=aggfunc,
             weight_on=weight_on,
             upgrade_absent=upgrade_absent,
+            as_of_date=as_of_date,
         )
         if not higher_levels:
             raise ValueError("Need higher levels")
@@ -308,17 +352,20 @@ class LocalAuthoritySeriesManipulator(object):
     extention to python series to more easily work with local authority data
     """
 
-    def __init__(self, pandas_obj):
+    def __init__(self, pandas_obj: pd.Series):
         self._obj = pandas_obj
 
     def name_to_code(self, allow_none=False) -> pd.Series:
         """
         convert a column of local authority names to 3 letter code
         """
-        return self._obj.apply(name_registry_lookup(allow_none))
+        return self._obj.apply(name_registry_lookup(allow_none))  # type: ignore
 
     def gss_to_code(self, allow_none=False) -> pd.Series:
         """
         convert a column of gss codes to local authority names
         """
-        return self._obj.apply(gss_registry_lookup(allow_none))
+        return self._obj.apply(gss_registry_lookup(allow_none))  # type: ignore
+
+
+LocalAuthorityDataFrameManipulator = pd.api.extensions.register_dataframe_accessor("la")(GovLayers)  # type: ignore

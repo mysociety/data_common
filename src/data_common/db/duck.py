@@ -139,9 +139,16 @@ class DuckQuery:
                 f"CREATE OR REPLACE VIEW {name} AS SELECT * FROM '{str(item)}'"
             )
         elif isinstance(item, Path):
-            self.ddb.execute(
-                f"CREATE OR REPLACE VIEW {name} AS SELECT * FROM '{str(item)}'"
-            )
+            # if csv
+            if item.suffix == ".csv":
+                print("loading csv")
+                self.ddb.execute(
+                    f"CREATE OR REPLACE VIEW {name} AS SELECT * FROM read_csv('{str(item)}', HEADER=True, AUTO_DETECT=True)"
+                )
+            else:
+                self.ddb.execute(
+                    f"CREATE OR REPLACE VIEW {name} AS SELECT * FROM '{str(item)}'"
+                )
         elif isinstance(item, pd.DataFrame):
             self.ddb.register(name, item)
 
