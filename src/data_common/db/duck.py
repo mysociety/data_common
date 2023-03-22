@@ -53,7 +53,7 @@ class DuckResponse:
 
     def df(self) -> pd.DataFrame:
         return self.response.df()
-    
+
     def debug_df(self, additional_query: str = "") -> pd.DataFrame:
         """
         Render the result of a query with additional options (like a limit)
@@ -131,7 +131,7 @@ class DuckQuery:
         if self.https is False:
             self.ddb.execute("install httpfs; load httpfs")
 
-    def register(self, name: str, item: pd.DataFrame | DuckUrl | Path) -> "DuckQuery":
+    def register(self, name: str, item: pd.DataFrame | DuckUrl | Path) -> None:
 
         if isinstance(item, DuckUrl):
             self.activate_https()
@@ -144,8 +144,6 @@ class DuckQuery:
             )
         elif isinstance(item, pd.DataFrame):
             self.ddb.register(name, item)
-
-        return self
 
     def add_view(self, name: str, query: str) -> "DuckQuery":
         self.ddb.execute(f"CREATE OR REPLACE VIEW {name} AS {query}")
@@ -198,12 +196,12 @@ class DuckQuery:
             self.ddb.execute(f"CREATE OR REPLACE VIEW {store_as} AS {rendered_query}")
             rendered_query = f"SELECT * FROM {store_as}"
         return DuckResponse(self, rendered_query)
-    
+
     def macro(self, func: Callable[..., str]) -> None:
         # get function name
         name = func.__name__
         # get arguments
-        args = func.__code__.co_varnames[:func.__code__.co_argcount]
+        args = func.__code__.co_varnames[: func.__code__.co_argcount]
         # give dummy values for all arguments and get the string contents
         query = func(*[1 for _ in args])
         # register the macro
@@ -213,7 +211,6 @@ class DuckQuery:
         {query}
         """
         self.query(macro_query).run()
-
 
 
 def duck_query(query: str | Path, **kwargs: Any) -> DuckResponse:
