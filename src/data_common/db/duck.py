@@ -131,7 +131,7 @@ class DuckQuery:
         if self.https is False:
             self.ddb.execute("install httpfs; load httpfs")
 
-    def register(self, name: str, item: pd.DataFrame | DuckUrl | Path) -> "DuckQuery":
+    def register(self, name: str, item: pd.DataFrame | DuckUrl | Path) -> None:
 
         if isinstance(item, DuckUrl):
             self.activate_https()
@@ -139,13 +139,18 @@ class DuckQuery:
                 f"CREATE OR REPLACE VIEW {name} AS SELECT * FROM '{str(item)}'"
             )
         elif isinstance(item, Path):
-            self.ddb.execute(
-                f"CREATE OR REPLACE VIEW {name} AS SELECT * FROM '{str(item)}'"
-            )
+            # if csv
+            if item.suffix == ".csv":
+                print("loading csv")
+                self.ddb.execute(
+                    f"CREATE OR REPLACE VIEW {name} AS SELECT * FROM read_csv('{str(item)}', HEADER=True, AUTO_DETECT=True)"
+                )
+            else:
+                self.ddb.execute(
+                    f"CREATE OR REPLACE VIEW {name} AS SELECT * FROM '{str(item)}'"
+                )
         elif isinstance(item, pd.DataFrame):
             self.ddb.register(name, item)
-
-        return self
 
     def add_view(self, name: str, query: str) -> "DuckQuery":
         self.ddb.execute(f"CREATE OR REPLACE VIEW {name} AS {query}")

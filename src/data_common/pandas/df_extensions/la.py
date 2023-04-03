@@ -75,7 +75,10 @@ def get_la_df(
             (get_date_from_from_string(df["start-date"]) < as_of_date)  # type: ignore
             | df["start-date"].isna()
         ]
-        # blank out any end dates after as_of_date
+        # blank out any replaced-by and end dates after as_of_date
+        df.loc[
+            get_date_from_from_string(df["end-date"]) >= as_of_date, "replaced-by"  # type: ignore
+        ] = np.nan
         df.loc[
             get_date_from_from_string(df["end-date"]) >= as_of_date, "end-date"  # type: ignore
         ] = np.nan
@@ -147,13 +150,13 @@ def name_registry_lookup(allow_none: bool = False) -> Callable:
     return convert
 
 
-@pd.api.extensions.register_dataframe_accessor("la")  # type: ignore
-class LocalAuthorityDataFrameManipulator(object):
+# type: ignore
+class GovLayers:
     """
     extention to pandas dataframe
     """
 
-    def __init__(self, pandas_obj):
+    def __init__(self, pandas_obj: pd.DataFrame):
         self._obj = pandas_obj
 
     def get_council_info(
@@ -189,7 +192,7 @@ class LocalAuthorityDataFrameManipulator(object):
             added = True
         lower_mask = ~df["local-authority-type"].isin(higher_codes)
         if added:
-            df = df.drop(columns=["local-authority-type"])
+            df = df.drop(columns=["local-authority-type"])  # type: ignore
         return df.loc[lower_mask]
 
     def create_code_column(
@@ -259,7 +262,7 @@ class LocalAuthorityDataFrameManipulator(object):
         if weight_on:
 
             def func(x):
-                return np.average(x, weights=df.loc[x.index, weight_on])
+                return np.average(x, weights=df.loc[x.index, weight_on])  # type: ignore
 
             aggfunc = func
 
@@ -349,17 +352,20 @@ class LocalAuthoritySeriesManipulator(object):
     extention to python series to more easily work with local authority data
     """
 
-    def __init__(self, pandas_obj):
+    def __init__(self, pandas_obj: pd.Series):
         self._obj = pandas_obj
 
     def name_to_code(self, allow_none=False) -> pd.Series:
         """
         convert a column of local authority names to 3 letter code
         """
-        return self._obj.apply(name_registry_lookup(allow_none))
+        return self._obj.apply(name_registry_lookup(allow_none))  # type: ignore
 
     def gss_to_code(self, allow_none=False) -> pd.Series:
         """
         convert a column of gss codes to local authority names
         """
-        return self._obj.apply(gss_registry_lookup(allow_none))
+        return self._obj.apply(gss_registry_lookup(allow_none))  # type: ignore
+
+
+LocalAuthorityDataFrameManipulator = pd.api.extensions.register_dataframe_accessor("la")(GovLayers)  # type: ignore

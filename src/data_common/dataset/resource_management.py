@@ -330,7 +330,7 @@ class DataPackage:
         """
         desc = self.get_datapackage()
         build_module = desc.get("custom", {}).get("build", "")
-        build_module = build_module.strip()
+        build_module = build_module.strip() if build_module else ""
         if not build_module:
             rich.print(
                 "[red]No build command or python path specified in custom.build in the yaml[/red]"
@@ -994,7 +994,8 @@ class DataPackage:
         if "licenses" in desc:
             ws.write(5, 2, "Licence", bold)
             for n, licence in enumerate(desc["licenses"]):
-                ws.write_url(5, 3 + n, licence["path"], string=licence["title"])
+                if "path" in licence:
+                    ws.write_url(5, 3 + n, licence["path"], string=licence["title"])
         if "version" in desc:
             ws.write(6, 2, "Version", bold)
             ws.write(6, 3, self.get_current_version())
