@@ -698,6 +698,9 @@ class DataPackage:
         prerelease: str = "",
     ):
         version = self.get_current_version()
+        current_version_is_prerelease = "-" in version
+        if current_version_is_prerelease:
+            version = version.split("-")[0]
         desc = self.get_datapackage()
         # check if prerelease is valid format, only ASCII alphanumerics and hyphens
         if prerelease and not re.match(r"^[a-zA-Z0-9-]+$", prerelease):
@@ -706,7 +709,11 @@ class DataPackage:
             new_semver = f"{new_semver}-{prerelease}"
         if is_valid_semver(new_semver) is False:
             raise ValueError(f"{new_semver} is not valid semver")
-        if semver_is_higher(version, new_semver) or new_semver == "0.1.0":
+        if (
+            semver_is_higher(version, new_semver)
+            or new_semver == "0.1.0"
+            or current_version_is_prerelease and (version == new_semver)
+        ):
             # check if package is valid
             validation_errors = self.validate(quiet=False)
             if validation_errors:
