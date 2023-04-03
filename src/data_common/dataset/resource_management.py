@@ -712,7 +712,7 @@ class DataPackage:
         if (
             semver_is_higher(version, new_semver)
             or new_semver == "0.1.0"
-            or current_version_is_prerelease and (version == new_semver)
+            or (current_version_is_prerelease and (version == new_semver))
         ):
             # check if package is valid
             validation_errors = self.validate(quiet=False)
