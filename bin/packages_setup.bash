@@ -1,7 +1,7 @@
 #!/bin/bash 
 
 curl -sSL https://install.python-poetry.org | python -
-echo "export PATH=\"/root/.local/bin:$PATH\"" > ~/.bashrc
+echo "export PATH=\"/root/.local/bin:$PATH\"" >> ~/.bashrc
 export PATH="/root/.local/bin:$PATH"
 poetry config virtualenvs.create false
 
@@ -56,6 +56,9 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githu
 apt update
 apt install gh
 gh extension install ajparsons/gh-fix-submodule-remote
+apt-get install bash-completion
+
+
 echo "gh extention installed"
 
 # get node and pyright
