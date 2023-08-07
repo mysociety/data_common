@@ -13,6 +13,7 @@ from pathlib import Path
 from shutil import copyfile
 from typing import Any, Callable, Dict, Literal, TypedDict, TypeVar, cast
 from urllib.parse import urlencode
+import geopandas as gpd
 
 import pandas as pd
 import pytest
@@ -169,7 +170,6 @@ class DataResource:
             raise ValueError(f"Unhandled file type {self.path.suffix}")
 
     def get_resource(self, inline_data: bool = False) -> dict[str, Any]:
-
         if self.has_resource_yaml:
             yaml = YAML(typ="safe")
             with open(self.resource_path, "r") as f:
@@ -205,7 +205,7 @@ class DataResource:
     ) -> SchemaValidator:
         return update_table_schema(self.path, existing_schema)
 
-    def rebuild_yaml(self):
+    def rebuild_yaml(self, is_geodata: bool = False):
         """
         Recreate yaml file from source file, preserving any custom values from previously existing yaml file
         """
@@ -217,6 +217,15 @@ class DataResource:
 
         desc["schema"] = self.get_schema_from_file(existing_desc.get("schema", None))
         desc["path"] = self.path.name
+
+        # if geodata - drop geometry example from schema
+        if is_geodata:
+            new_fields = []
+            for f in desc["schema"]["fields"]:
+                if f["name"] == "geometry":
+                    f["example"] = ""
+                new_fields.append(f)
+            desc["schema"]["fields"] = new_fields
 
         # ensure a blank title and description
         new_dict = {"title": None, "description": None, "custom": {}}
@@ -337,7 +346,6 @@ class DataPackage:
             )
             return None
         if ":" in build_module and " " not in build_module:
-
             module, function = build_module.split(":")
             module = importlib.import_module(module)
             function = getattr(module, function)
@@ -680,7 +688,6 @@ class DataPackage:
                         )
 
         if current_data != previous_data:
-
             dict_diff = diff_dicts(previous_data, current_data)
             rich.print(dict_diff)
 
@@ -809,8 +816,13 @@ class DataPackage:
         resource.rebuild_yaml()
 
     def rebuild_all_resources(self):
+        is_geodata = self.is_geodata()
         for resource in self.resources().values():
-            resource.rebuild_yaml()
+            resource.rebuild_yaml(is_geodata=is_geodata)
+
+    def is_geodata(self) -> bool:
+        desc = self.get_datapackage()
+        return desc["custom"].get("is_geodata", False)
 
     def get_datapackage(self) -> dict[str, Any]:
         yaml = YAML(typ="safe")
@@ -897,15 +909,21 @@ class DataPackage:
         """
 
         desc = self.get_datapackage()
-        csv_value = desc.get("custom", {}).get("formats", {}).get("csv", True)
-        parquet_value = desc.get("custom", {}).get("formats", {}).get("parquet", True)
+        formats = desc.get("custom", {}).get("formats", {})
+        csv_value = formats.get("csv", True)
+        parquet_value = formats.get("parquet", True)
+        geojson_value = formats.get("geojson", True)
+        geopackage_value = formats.get("gpkg", True)
 
         csv_copy_query = """
         copy (select * from {{ source }}) to {{ dest }} (format PARQUET);
         """
+        exclude = ""
+        if desc["custom"].get("is_geodata", False):
+            exclude = "EXCLUDE geometry"
 
         parquet_copy_query = """
-        copy (select * from {{ source }}) to {{ dest }} (HEADER, DELIMITER ',');
+        copy (select * {{ exclude }} from {{ source }}) to {{ dest }} (HEADER, DELIMITER ',');
         """
 
         for r in self.resources().values():
@@ -916,12 +934,24 @@ class DataPackage:
                 if parquet_value:
                     parquet_file = self.build_path() / (r.path.stem + ".parquet")
                     duck_query(csv_copy_query, source=r.path, dest=parquet_file)
+                if geojson_value or geopackage_value:
+                    raise ValueError(
+                        "Writing to geojson/geopackage from csv source not supported. Use parquet internally."
+                    )
             elif r.path.suffix == ".parquet":
                 if parquet_value:
                     copyfile(r.path, self.build_path() / r.path.name)
                 if csv_value:
                     csv_file = self.build_path() / (r.path.stem + ".csv")
                     duck_query(parquet_copy_query, source=r.path, dest=csv_file)
+                if geojson_value:
+                    geojson_path = self.build_path() / (r.path.stem + ".geojson")
+                    gdf = gpd.read_parquet(r.path)
+                    gdf.to_file(geojson_path, driver="GeoJSON")
+                if geopackage_value:
+                    geopackage_path = self.build_path() / (r.path.stem + ".gpkg")
+                    gdf = gpd.read_parquet(r.path)
+                    gdf.to_file(geopackage_path, driver="GPKG")
 
     def get_datapackage_order(self) -> int:
         """
@@ -1134,6 +1164,9 @@ class DataPackage:
 
         for sheet_name, df in sheets.items():
             short_sheet_name = sheet_name[-31:]  # only allow 31 characters
+            # if geometry is column - remove it
+            if "geometry" in df.columns:
+                df = df.drop(columns=["geometry"])
             df.to_excel(writer, sheet_name=short_sheet_name, index=False)
 
             for column in df:
@@ -1142,7 +1175,6 @@ class DataPackage:
 
                 col_idx = df.columns.get_loc(column)
                 if column_length <= 50:
-
                     writer.sheets[short_sheet_name].set_column(
                         col_idx, col_idx, column_length
                     )
@@ -1236,7 +1268,6 @@ class DataPackage:
         # for instance splitting comma seperated fields to arrays
         for resource_slug, modify_maps in composite_options["modify"].items():
             for column, modify_type in modify_maps.items():
-
                 # split specified columns to arrays and update the schema
                 if modify_type == "comma-to-array":
                     for resource in datapackage["resources"]:
@@ -1282,7 +1313,6 @@ class DataPackage:
         ...
 
     def print_status(self):
-
         resources = list(self.resources().values())
 
         df = pd.DataFrame(
