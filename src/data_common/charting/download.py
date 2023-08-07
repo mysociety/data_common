@@ -39,12 +39,12 @@ def json_to_chart(json_spec: str) -> alt.Chart:
             del di_copy["datasets"]
             del di_copy["width"]
             c = Chart.from_dict(di_copy)
-            chart += c
+            chart += c  # type: ignore
     else:
         del di["width"]
         del di["config"]["view"]
         chart = Chart.from_dict(di)
-    return chart
+    return chart  # type: ignore
 
 
 def get_chart_from_url(url: str, n: int = 0) -> alt.Chart:
