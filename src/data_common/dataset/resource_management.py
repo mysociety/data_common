@@ -912,8 +912,8 @@ class DataPackage:
         formats = desc.get("custom", {}).get("formats", {})
         csv_value = formats.get("csv", True)
         parquet_value = formats.get("parquet", True)
-        geojson_value = formats.get("geojson", True)
-        geopackage_value = formats.get("gpkg", True)
+        geojson_value = formats.get("geojson", False)
+        geopackage_value = formats.get("gpkg", False)
 
         csv_copy_query = """
         copy (select * from {{ source }}) to {{ dest }} (format PARQUET);
