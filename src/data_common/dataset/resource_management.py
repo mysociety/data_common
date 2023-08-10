@@ -933,7 +933,7 @@ class DataPackage:
                     copyfile(r.path, self.build_path() / r.path.name)
                 if parquet_value:
                     parquet_file = self.build_path() / (r.path.stem + ".parquet")
-                    duck_query(csv_copy_query, source=r.path, dest=parquet_file)
+                    duck_query(csv_copy_query, source=r.path, dest=parquet_file).run()
                 if geojson_value or geopackage_value:
                     raise ValueError(
                         "Writing to geojson/geopackage from csv source not supported. Use parquet internally."
@@ -943,7 +943,12 @@ class DataPackage:
                     copyfile(r.path, self.build_path() / r.path.name)
                 if csv_value:
                     csv_file = self.build_path() / (r.path.stem + ".csv")
-                    duck_query(parquet_copy_query, source=r.path, dest=csv_file)
+                    duck_query(
+                        parquet_copy_query,
+                        exclude=exclude,
+                        source=r.path,
+                        dest=csv_file,
+                    ).run()
                 if geojson_value:
                     geojson_path = self.build_path() / (r.path.stem + ".geojson")
                     gdf = gpd.read_parquet(r.path)
