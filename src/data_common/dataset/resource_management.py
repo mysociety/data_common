@@ -11,7 +11,7 @@ import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from shutil import copyfile
-from typing import Any, Callable, Dict, Literal, TypedDict, TypeVar, cast
+from typing import Any, Callable, Literal, TypedDict, TypeVar, cast
 from urllib.parse import urlencode
 import geopandas as gpd
 
@@ -21,9 +21,7 @@ import rich
 import xlsxwriter
 import re
 
-from frictionless import Schema, describe, validate
-from pyparsing import any_open_tag
-from rich.markdown import Markdown
+from frictionless import describe, validate
 from rich.table import Table
 from ruamel.yaml import YAML
 
@@ -169,15 +167,18 @@ class DataResource:
         else:
             raise ValueError(f"Unhandled file type {self.path.suffix}")
 
-    def get_resource(self, inline_data: bool = False) -> dict[str, Any]:
+    def get_resource(
+        self, inline_data: bool = False, is_geodata: bool = False
+    ) -> dict[str, Any]:
         if self.has_resource_yaml:
             yaml = YAML(typ="safe")
-            with open(self.resource_path, "r") as f:
+            with self.resource_path.open("r") as f:
                 resource = yaml.load(f)
             if inline_data:
-                resource["data"] = (
-                    self.get_df().fillna(value="").to_dict(orient="records")
-                )
+                df = self.get_df()
+                if is_geodata and "geometry" in df.columns:
+                    df = df.drop(columns=["geometry"])
+                resource["data"] = df.fillna(value="").to_dict(orient="records")
                 resource["format"] = "json"
                 del resource["scheme"]
                 del resource["path"]
@@ -209,8 +210,6 @@ class DataResource:
         """
         Recreate yaml file from source file, preserving any custom values from previously existing yaml file
         """
-        from frictionless.resource.resource import Resource
-
         existing_desc = self.get_resource()
         desc = describe(self.path)
         desc.update(existing_desc)
@@ -271,7 +270,7 @@ class DataResource:
         yaml_str = yaml_str.replace("- no\n", "- 'no'\n")
         yaml_str = yaml_str.replace("- yes\n", "- 'yes'\n")
 
-        with open(self.resource_path, "w") as f:
+        with self.resource_path.open("w") as f:
             f.write(yaml_str)
         print(f"Updated config for {self.slug} to {self.resource_path}")
 
@@ -1141,7 +1140,7 @@ class DataPackage:
 
         return composite_options
 
-    def build_excel(self):
+    def build_excel(self, is_geodata: bool = False):
         """
         Build a single excel file for all resources
         """
@@ -1173,7 +1172,7 @@ class DataPackage:
         for sheet_name, df in sheets.items():
             short_sheet_name = sheet_name[-31:]  # only allow 31 characters
             # if geometry is column - remove it
-            if "geometry" in df.columns:
+            if is_geodata and "geometry" in df.columns:
                 df = df.drop(columns=["geometry"])
             df.to_excel(writer, sheet_name=short_sheet_name, index=False)
 
@@ -1193,7 +1192,7 @@ class DataPackage:
 
         writer.save()
 
-    def build_sqlite(self):
+    def build_sqlite(self, is_geodata: bool = False):
         """
         Create a composite sqlite file for all resources
         with metadata as a seperate table.
@@ -1216,7 +1215,10 @@ class DataPackage:
         for slug, resource in self.resources().items():
             if slug not in allowed_resource_slugs:
                 continue
-            sheets[slug] = resource.get_df()
+            df = resource.get_df()
+            if is_geodata and "geometry" in df.columns:
+                df = df.drop(columns=["geometry"])
+            sheets[slug] = df
             meta_df = resource.get_metadata_df()
             meta_df["resource"] = slug
             metadata.append(meta_df)
@@ -1232,7 +1234,7 @@ class DataPackage:
             df.to_sql(name, con, index=False)
         con.close()
 
-    def build_composite_json(self):
+    def build_composite_json(self, is_geodata: bool = False):
         """
         This builds a composite json file that inlines the data as json.
         It can have less resources than the total, and some modifiers on the data.
@@ -1251,7 +1253,7 @@ class DataPackage:
         ]
 
         datapackage["resources"] = [
-            x.get_resource(inline_data=True)
+            x.get_resource(inline_data=True, is_geodata=is_geodata)
             for x in self.resources().values()
             if x.slug in allowed_resource_slugs
         ]
@@ -1310,9 +1312,10 @@ class DataPackage:
         """
         Create composite files for the datapackage
         """
-        self.build_excel()
-        self.build_sqlite()
-        self.build_composite_json()
+        is_geodata = self.is_geodata()
+        self.build_excel(is_geodata)
+        self.build_sqlite(is_geodata)
+        self.build_composite_json(is_geodata)
 
     def build_markdown(self):
         """
