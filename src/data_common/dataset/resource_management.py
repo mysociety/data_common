@@ -920,9 +920,9 @@ class DataPackage:
 
         # __index_level_0__ is an internal parquet column that duckdb has access to
         # but we don't want to export
-        exclude = "EXCLUDE __index_level_0__"
+        exclude = "EXCLUDE (__index_level_0__)"
         if desc["custom"].get("is_geodata", False):
-            exclude = "EXCLUDE __index_level_0__, geometry"
+            exclude = "EXCLUDE (__index_level_0__, geometry)"
 
         parquet_copy_query = """
         copy (select * {{ exclude }} from {{ source }}) to {{ dest }} (HEADER, DELIMITER ',');
