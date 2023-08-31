@@ -125,14 +125,12 @@ class Cluster:
         self.label_df = label_df
 
     def set_k(self, k: int) -> "Cluster":
-
         new = copy.deepcopy(self)
 
         new.k = k
         return new
 
     def get_label_name(self, n, include_short=True) -> str:
-
         short_label = n
         name = self.label_names.get(self.k, {}).get(n, short_label)
         if include_short:
@@ -205,7 +203,6 @@ class Cluster:
         return mapping.to_dict()
 
     def get_label_options(self) -> list:
-
         return [self.get_label_name(x) for x in range(1, self.k + 1)]
 
     def get_cluster_label_ids(self) -> pd.Series:
@@ -215,7 +212,6 @@ class Cluster:
         return labels
 
     def get_cluster_labels(self, include_short=True) -> ArrayLike:
-
         labels = self.get_cluster_label_ids()
 
         def f(x):
@@ -227,7 +223,6 @@ class Cluster:
     label_array = get_cluster_labels
 
     def get_cluster_descs(self) -> ArrayLike:
-
         labels = self.get_cluster_label_ids()
         labels = labels.apply(lambda x: self.get_label_desc(n=x))
         return np.array(labels)
@@ -331,7 +326,7 @@ class Cluster:
         """
         fetch k means results for this cluster
         """
-        km = KMeans(n_clusters=k, random_state=self.default_seed, n_init=10)
+        km = KMeans(n_clusters=k, random_state=self.default_seed, n_init=10)  # type: ignore
         return km.fit(self.df)
 
     def get_clusters(self, k: int):
@@ -622,7 +617,6 @@ def join_distance(df_label_dict: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     """
 
     def prepare(df, label):
-
         return (
             df.set_index(list(df.columns[:2]))
             .rename(columns={"distance": label})

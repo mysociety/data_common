@@ -25,7 +25,11 @@ def get_settings(
 
     settings_file = Path(*top_level, toml_file)
 
-    data = toml.load(settings_file)["notebook"]["settings"]
+    try:
+        data = toml.load(settings_file)["tool"]["notebook"]["settings"]
+    except KeyError:
+        # backward compatibiiity for invalid toml
+        data = toml.load(settings_file)["notebook"]["settings"]
 
     env_data = {}
     if env_file and Path(*top_level, env_file).exists():

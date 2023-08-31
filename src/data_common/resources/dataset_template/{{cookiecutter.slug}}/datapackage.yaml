@@ -31,6 +31,9 @@ custom:
   formats:
     csv: true
     parquet: true
+    gpkg: false
+    geojson: false
+  is_geodata: false
   composite:
     xlsx:
       include: all

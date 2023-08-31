@@ -46,6 +46,7 @@ pyarrow = "^11.0.0"
 duckdb = "^0.6.1"
 sqlfluff = "^1.4.5"
 pydantic = "^2.3.0"
+geopandas = "^0.13.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
