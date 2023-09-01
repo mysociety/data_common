@@ -1,6 +1,6 @@
 # pyright: strict
-from typing import Iterator, Any
 from itertools import product
+from typing import Any, Iterator
 
 
 def iter_format(
@@ -25,6 +25,6 @@ def iter_format(
             x += 1
 
     for p in parameters:
-        kw_parameters = label_parameters(p)
+        kw_parameters = label_parameters(p)  # type: ignore
         pos_parameters = list(pos_from_keyword(kw_parameters))
         yield str_source.format(*pos_parameters, **kw_parameters)
