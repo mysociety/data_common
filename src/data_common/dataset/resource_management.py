@@ -3,6 +3,7 @@ import importlib
 import io
 import json
 import os
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -13,14 +14,12 @@ from pathlib import Path
 from shutil import copyfile
 from typing import Any, Callable, Literal, TypedDict, TypeVar, cast
 from urllib.parse import urlencode
-import geopandas as gpd
 
+import geopandas as gpd
 import pandas as pd
 import pytest
 import rich
 import xlsxwriter
-import re
-
 from frictionless import describe, validate
 from rich.table import Table
 from ruamel.yaml import YAML
@@ -920,7 +919,7 @@ class DataPackage:
 
         # __index_level_0__ is an internal parquet column that duckdb has access to
         # but we don't want to export
-        exclude = "EXCLUDE (__index_level_0__)"
+        exclude = ""
         if desc["custom"].get("is_geodata", False):
             exclude = "EXCLUDE (__index_level_0__, geometry)"
 
