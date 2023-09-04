@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import NamedTuple, Union
+from typing import Any, NamedTuple, Union
 from urllib.parse import ParseResult, urlparse
 
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import CoreSchema, core_schema
 from typing_extensions import Self
 
 
@@ -191,6 +193,12 @@ class Url(UrlHandler, str):
 
     def __init__(self, url_string: str):
         UrlHandler.__init__(self, url_string)
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        return core_schema.no_info_after_validator_function(cls, handler(str))
 
 
 UrlLike = Union[str, Url]
