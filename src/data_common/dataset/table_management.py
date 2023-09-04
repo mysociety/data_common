@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, TypedDict
 
 import pandas as pd
 from pandas.io.json import build_table_schema
+
 from data_common.db import duck_query
 
 
@@ -80,6 +81,9 @@ class Schema:
                 field["constraints"]["enum"] = enum_value
             if isinstance(enum_value, EnumPlaceholder):
                 field["constraints"]["enum"] = enum_value.process(col)
+            if isinstance(field["constraints"]["enum"], list):
+                # sort the enum values
+                field["constraints"]["enum"] = sorted(field["constraints"]["enum"])
         return field
 
     @classmethod
@@ -105,7 +109,6 @@ class Schema:
 def update_table_schema(
     path: Path, existing_schema: SchemaValidator | None
 ) -> SchemaValidator:
-
     if path.suffix == ".csv":
         df = pd.read_csv(path)
     elif path.suffix == ".parquet":
