@@ -131,7 +131,7 @@ def color_scale(
     use_palette = palette[: len(domain)]
     if reverse:
         use_palette = use_palette[::-1]
-    return alt.Scale(domain=domain, range=use_palette)
+    return alt.Scale(domain=domain, range=use_palette)  # type: ignore
 
 
 font = "Source Sans Pro"

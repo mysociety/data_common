@@ -3,7 +3,7 @@ from nbconvert.preprocessors.execute import ExecutePreprocessor
 from pathlib import Path
 
 
-def run_notebook(notebook_filename: Path):
+def run_notebook(notebook_filename: Path, save: bool = True):
     """
     Run a notebook as part of another process
     """
@@ -12,6 +12,8 @@ def run_notebook(notebook_filename: Path):
         nb = nbformat.read(f, as_version=4)
         ep = ExecutePreprocessor(timeout=600)
         ep.preprocess(nb, {"metadata": {"path": "notebooks/"}})
-    with open(notebook_filename, "w", encoding="utf-8") as f:
-        nbformat.write(nb, f)
+    if save:
+        print(f"Saving notebook: {notebook_filename}")
+        with open(notebook_filename, "w", encoding="utf-8") as f:
+            nbformat.write(nb, f)
     print("Done")

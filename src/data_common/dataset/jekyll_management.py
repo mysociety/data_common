@@ -12,7 +12,6 @@ from .version_management import map_versions_to_latest_major_minor
 def markdown_with_frontmatter(
     data: dict[str, Any], dest: Path, content: str = "", from_file: Path | None = None
 ):
-
     if content and from_file:
         raise ValueError("Trying to use contents and from_file arguments")
 
@@ -31,7 +30,6 @@ def markdown_with_frontmatter(
 
 
 def render_download_format_to_dir(items: list[dict[str, Any]], output_dir: Path):
-
     if output_dir.exists() is False:
         output_dir.mkdir()
     # remove existing files
@@ -52,7 +50,6 @@ def render_download_format_to_dir(items: list[dict[str, Any]], output_dir: Path)
 
 
 def render_sources_to_dir(items: list[dict[str, Any]], output_dir: Path):
-
     if output_dir.exists() is False:
         output_dir.mkdir()
     # remove existing files
@@ -103,7 +100,7 @@ def make_version_info_page(items: list[dict[str, Any]], output_dir: Path):
     df = pd.DataFrame(items)[["name", "title", "version", "full_version"]]
 
     for name, d in df.groupby("name"):
-        safe_name = name.replace("-", "_")
+        safe_name = str(name).replace("-", "_")
         data_dict = {
             "name": name,
             "title": d["title"].iloc[0],

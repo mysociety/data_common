@@ -3,6 +3,7 @@ import importlib
 import io
 import json
 import os
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -11,18 +12,15 @@ import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from shutil import copyfile
-from typing import Any, Callable, Dict, Literal, TypedDict, TypeVar, cast
+from typing import Any, Callable, Literal, TypedDict, TypeVar, cast
 from urllib.parse import urlencode
 
+import geopandas as gpd
 import pandas as pd
 import pytest
 import rich
 import xlsxwriter
-import re
-
-from frictionless import Schema, describe, validate
-from pyparsing import any_open_tag
-from rich.markdown import Markdown
+from frictionless import describe, validate
 from rich.table import Table
 from ruamel.yaml import YAML
 
@@ -168,16 +166,18 @@ class DataResource:
         else:
             raise ValueError(f"Unhandled file type {self.path.suffix}")
 
-    def get_resource(self, inline_data: bool = False) -> dict[str, Any]:
-
+    def get_resource(
+        self, inline_data: bool = False, is_geodata: bool = False
+    ) -> dict[str, Any]:
         if self.has_resource_yaml:
             yaml = YAML(typ="safe")
-            with open(self.resource_path, "r") as f:
+            with self.resource_path.open("r") as f:
                 resource = yaml.load(f)
             if inline_data:
-                resource["data"] = (
-                    self.get_df().fillna(value="").to_dict(orient="records")
-                )
+                df = self.get_df()
+                if is_geodata and "geometry" in df.columns:
+                    df = df.drop(columns=["geometry"])
+                resource["data"] = df.fillna(value="").to_dict(orient="records")
                 resource["format"] = "json"
                 del resource["scheme"]
                 del resource["path"]
@@ -205,18 +205,25 @@ class DataResource:
     ) -> SchemaValidator:
         return update_table_schema(self.path, existing_schema)
 
-    def rebuild_yaml(self):
+    def rebuild_yaml(self, is_geodata: bool = False):
         """
         Recreate yaml file from source file, preserving any custom values from previously existing yaml file
         """
-        from frictionless.resource.resource import Resource
-
         existing_desc = self.get_resource()
         desc = describe(self.path)
         desc.update(existing_desc)
 
         desc["schema"] = self.get_schema_from_file(existing_desc.get("schema", None))
         desc["path"] = self.path.name
+
+        # if geodata - drop geometry example from schema
+        if is_geodata:
+            new_fields = []
+            for f in desc["schema"]["fields"]:
+                if f["name"] == "geometry":
+                    f["example"] = ""
+                new_fields.append(f)
+            desc["schema"]["fields"] = new_fields
 
         # ensure a blank title and description
         new_dict = {"title": None, "description": None, "custom": {}}
@@ -262,7 +269,7 @@ class DataResource:
         yaml_str = yaml_str.replace("- no\n", "- 'no'\n")
         yaml_str = yaml_str.replace("- yes\n", "- 'yes'\n")
 
-        with open(self.resource_path, "w") as f:
+        with self.resource_path.open("w") as f:
             f.write(yaml_str)
         print(f"Updated config for {self.slug} to {self.resource_path}")
 
@@ -337,7 +344,6 @@ class DataPackage:
             )
             return None
         if ":" in build_module and " " not in build_module:
-
             module, function = build_module.split(":")
             module = importlib.import_module(module)
             function = getattr(module, function)
@@ -680,7 +686,6 @@ class DataPackage:
                         )
 
         if current_data != previous_data:
-
             dict_diff = diff_dicts(previous_data, current_data)
             rich.print(dict_diff)
 
@@ -809,8 +814,13 @@ class DataPackage:
         resource.rebuild_yaml()
 
     def rebuild_all_resources(self):
+        is_geodata = self.is_geodata()
         for resource in self.resources().values():
-            resource.rebuild_yaml()
+            resource.rebuild_yaml(is_geodata=is_geodata)
+
+    def is_geodata(self) -> bool:
+        desc = self.get_datapackage()
+        return desc["custom"].get("is_geodata", False)
 
     def get_datapackage(self) -> dict[str, Any]:
         yaml = YAML(typ="safe")
@@ -897,15 +907,24 @@ class DataPackage:
         """
 
         desc = self.get_datapackage()
-        csv_value = desc.get("custom", {}).get("formats", {}).get("csv", True)
-        parquet_value = desc.get("custom", {}).get("formats", {}).get("parquet", True)
+        formats = desc.get("custom", {}).get("formats", {})
+        csv_value = formats.get("csv", True)
+        parquet_value = formats.get("parquet", True)
+        geojson_value = formats.get("geojson", False)
+        geopackage_value = formats.get("gpkg", False)
 
         csv_copy_query = """
         copy (select * from {{ source }}) to {{ dest }} (format PARQUET);
         """
 
+        # __index_level_0__ is an internal parquet column that duckdb has access to
+        # but we don't want to export
+        exclude = ""
+        if desc["custom"].get("is_geodata", False):
+            exclude = "EXCLUDE (__index_level_0__, geometry)"
+
         parquet_copy_query = """
-        copy (select * from {{ source }}) to {{ dest }} (HEADER, DELIMITER ',');
+        copy (select * {{ exclude }} from {{ source }}) to {{ dest }} (HEADER, DELIMITER ',');
         """
 
         for r in self.resources().values():
@@ -915,13 +934,30 @@ class DataPackage:
                     copyfile(r.path, self.build_path() / r.path.name)
                 if parquet_value:
                     parquet_file = self.build_path() / (r.path.stem + ".parquet")
-                    duck_query(csv_copy_query, source=r.path, dest=parquet_file)
+                    duck_query(csv_copy_query, source=r.path, dest=parquet_file).run()
+                if geojson_value or geopackage_value:
+                    raise ValueError(
+                        "Writing to geojson/geopackage from csv source not supported. Use parquet internally."
+                    )
             elif r.path.suffix == ".parquet":
                 if parquet_value:
                     copyfile(r.path, self.build_path() / r.path.name)
                 if csv_value:
                     csv_file = self.build_path() / (r.path.stem + ".csv")
-                    duck_query(parquet_copy_query, source=r.path, dest=csv_file)
+                    duck_query(
+                        parquet_copy_query,
+                        exclude=exclude,
+                        source=r.path,
+                        dest=csv_file,
+                    ).run()
+                if geojson_value:
+                    geojson_path = self.build_path() / (r.path.stem + ".geojson")
+                    gdf = gpd.read_parquet(r.path)
+                    gdf.to_file(geojson_path, driver="GeoJSON")
+                if geopackage_value:
+                    geopackage_path = self.build_path() / (r.path.stem + ".gpkg")
+                    gdf = gpd.read_parquet(r.path)
+                    gdf.to_file(geopackage_path, driver="GPKG")
 
     def get_datapackage_order(self) -> int:
         """
@@ -1103,7 +1139,7 @@ class DataPackage:
 
         return composite_options
 
-    def build_excel(self):
+    def build_excel(self, is_geodata: bool = False):
         """
         Build a single excel file for all resources
         """
@@ -1134,6 +1170,9 @@ class DataPackage:
 
         for sheet_name, df in sheets.items():
             short_sheet_name = sheet_name[-31:]  # only allow 31 characters
+            # if geometry is column - remove it
+            if is_geodata and "geometry" in df.columns:
+                df = df.drop(columns=["geometry"])
             df.to_excel(writer, sheet_name=short_sheet_name, index=False)
 
             for column in df:
@@ -1142,7 +1181,6 @@ class DataPackage:
 
                 col_idx = df.columns.get_loc(column)
                 if column_length <= 50:
-
                     writer.sheets[short_sheet_name].set_column(
                         col_idx, col_idx, column_length
                     )
@@ -1153,7 +1191,7 @@ class DataPackage:
 
         writer.save()
 
-    def build_sqlite(self):
+    def build_sqlite(self, is_geodata: bool = False):
         """
         Create a composite sqlite file for all resources
         with metadata as a seperate table.
@@ -1176,7 +1214,10 @@ class DataPackage:
         for slug, resource in self.resources().items():
             if slug not in allowed_resource_slugs:
                 continue
-            sheets[slug] = resource.get_df()
+            df = resource.get_df()
+            if is_geodata and "geometry" in df.columns:
+                df = df.drop(columns=["geometry"])
+            sheets[slug] = df
             meta_df = resource.get_metadata_df()
             meta_df["resource"] = slug
             metadata.append(meta_df)
@@ -1192,7 +1233,7 @@ class DataPackage:
             df.to_sql(name, con, index=False)
         con.close()
 
-    def build_composite_json(self):
+    def build_composite_json(self, is_geodata: bool = False):
         """
         This builds a composite json file that inlines the data as json.
         It can have less resources than the total, and some modifiers on the data.
@@ -1211,7 +1252,7 @@ class DataPackage:
         ]
 
         datapackage["resources"] = [
-            x.get_resource(inline_data=True)
+            x.get_resource(inline_data=True, is_geodata=is_geodata)
             for x in self.resources().values()
             if x.slug in allowed_resource_slugs
         ]
@@ -1236,7 +1277,6 @@ class DataPackage:
         # for instance splitting comma seperated fields to arrays
         for resource_slug, modify_maps in composite_options["modify"].items():
             for column, modify_type in modify_maps.items():
-
                 # split specified columns to arrays and update the schema
                 if modify_type == "comma-to-array":
                     for resource in datapackage["resources"]:
@@ -1271,9 +1311,10 @@ class DataPackage:
         """
         Create composite files for the datapackage
         """
-        self.build_excel()
-        self.build_sqlite()
-        self.build_composite_json()
+        is_geodata = self.is_geodata()
+        self.build_excel(is_geodata)
+        self.build_sqlite(is_geodata)
+        self.build_composite_json(is_geodata)
 
     def build_markdown(self):
         """
@@ -1282,7 +1323,6 @@ class DataPackage:
         ...
 
     def print_status(self):
-
         resources = list(self.resources().values())
 
         df = pd.DataFrame(
