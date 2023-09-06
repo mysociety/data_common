@@ -93,3 +93,6 @@ rbenv global 2.7.1
 gem install bundler
 gem install jekyll -v 3.9.2
 rbenv rehash
+
+# add dataset autocomplete
+echo 'eval "$(_DATASET_COMPLETE=bash_source dataset)"' >> ~/.bashrc
