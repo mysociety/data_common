@@ -976,10 +976,25 @@ class DataPackage:
         """
         datapackage = self.get_datapackage()
         datapackage["resources"] = [x.get_resource() for x in self.resources().values()]
+        for resource in datapackage["resources"]:
+            if "custom" not in resource:
+                resource["custom"] = {}
+            if "datasette" not in resource["custom"]:
+                resource["custom"]["datasette"] = {}
+            if "about" not in resource["custom"]["datasette"]:
+                resource["custom"]["datasette"]["about"] = "Info & Downloads"
+                resource["custom"]["datasette"][
+                    "about_url"
+                ] = f"{self.url}#{resource['name']}"
         if "custom" not in datapackage:
             datapackage["custom"] = {}
-            if "dataset_order" not in datapackage["custom"]:
-                datapackage["custom"]["dataset_order"] = 999
+        if "dataset_order" not in datapackage["custom"]:
+            datapackage["custom"]["dataset_order"] = 999
+        if "datasette" not in ["custom"]:
+            datapackage["custom"]["datasette"] = {}
+            if "about" not in datapackage["custom"]["datasette"]:
+                datapackage["custom"]["datasette"]["about"] = "Info & Downloads"
+                datapackage["custom"]["datasette"]["about_url"] = self.url
         return datapackage
 
     def build_json(self):
