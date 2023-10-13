@@ -802,12 +802,16 @@ class DataPackage:
 
     @property
     def url(self) -> str:
-        return (
+        url = (
             get_settings()["publish_url"]
             + "datasets/"
-            + self.slug.replace("_", "-")
+            + self.slug.replace("-", "_")
             + "/"
+            + self.get_datapackage()["version"].replace(".", "_")
         )
+        if "datasets/datasets" in url:
+            url = url.replace("/datasets/datasets/", "/datasets/")
+        return url
 
     def rebuild_resource(self, slug: str):
         resource = self.resources()[slug]
