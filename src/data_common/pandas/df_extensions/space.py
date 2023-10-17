@@ -599,7 +599,7 @@ class Cluster:
         for x_var, y_var, z_var in combos:
             chart_no += 1
             ax = fig.add_subplot(rows, 2, chart_no, projection="3d")
-            ax.scatter(df[x_var], df[y_var], df[z_var], c=labels)
+            ax.scatter(df[x_var], df[y_var], df[z_var], c=labels)  # type: ignore
             ax.set_xlabel(self._axis_label(x_var))
             ax.set_ylabel(self._axis_label(y_var))
             ax.set_zlabel(self._axis_label(z_var))  # type: ignore
