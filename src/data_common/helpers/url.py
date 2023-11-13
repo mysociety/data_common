@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, NamedTuple, Union
+from typing import Any, NamedTuple, Union, TypeVar
 from urllib.parse import ParseResult, urlparse
 
 from pydantic import GetCoreSchemaHandler
@@ -35,6 +35,9 @@ class NetLoc(NamedTuple):
         return ":".join(self)
 
 
+T = TypeVar("T", bound="UrlHandler")
+
+
 class UrlHandler:
     def __str__(self):
         return self._urlparse.geturl()
@@ -49,7 +52,7 @@ class UrlHandler:
         self._netloc = NetLoc.from_parse_result(self._urlparse)
 
     def update(
-        self,
+        self: T,
         scheme: str = "",
         path: str = "",
         params: str = "",
@@ -59,7 +62,7 @@ class UrlHandler:
         port: str = "",
         username: str = "",
         password: str = "",
-    ) -> Self:
+    ) -> T:
         new = self.__class__(self._urlparse.geturl())
 
         if scheme:
