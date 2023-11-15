@@ -166,7 +166,7 @@ class UrlHandler:
         self._netloc = self._netloc._replace(port=value)
         self._urlparse = self._urlparse._replace(netloc=self._netloc.construct_netloc())
 
-    def __truediv__(self, other: str) -> Self:
+    def __truediv__(self: T, other: str) -> T:
         new_url = self._urlparse._replace(path=self._urlparse.path + "/" + other)
         return self.__class__(new_url.geturl())
 
