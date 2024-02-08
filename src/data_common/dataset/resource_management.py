@@ -269,6 +269,10 @@ class DataResource:
         yaml_str = yaml_str.replace("- no\n", "- 'no'\n")
         yaml_str = yaml_str.replace("- yes\n", "- 'yes'\n")
 
+        # times get formatted incorrect as numbers, we want to add quotes around them
+        # e.g. 'example: 21:30' should become 'example: "21:30"'
+        yaml_str = re.sub(r"example: (\d{2}:\d{2})", r'example: "\1"', yaml_str)
+
         with self.resource_path.open("w") as f:
             f.write(yaml_str)
         print(f"Updated config for {self.slug} to {self.resource_path}")
