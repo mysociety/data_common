@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, TypedDict
 
 import pandas as pd
 from pandas.io.json import build_table_schema
-
+import numpy as np
 from data_common.db import duck_query
 
 
@@ -18,15 +18,29 @@ class SchemaValidator(TypedDict):
     fields: list[TypedFieldSchema]
 
 
+def expand_array(series: pd.Series) -> pd.Series:
+    """
+    This function takes in a series and returns a new series where any arrays have been expanded into separate rows.
+    """
+    # if any values are an np.ndarray - we need to convert them to a string to avoid a TypeError
+    if any(isinstance(x, (list, tuple, np.ndarray)) for x in series):
+        return series.apply(str)  # type: ignore
+    return series
+
+
 def is_unique(series: pd.Series) -> bool:
     """
     This function takes in a series and returns a boolean of whether or not all the values in the series are unique.
     """
-    return len(series) == len(series.unique())
+
+    return len(series) == len(expand_array(series).unique())
 
 
 def get_example(series: pd.Series) -> str | int | float:
-    item = sorted(list(series.dropna()))
+    try:
+        item = sorted(list(series.dropna()))
+    except ValueError:
+        item = series
     if len(item) == 0:
         return ""
     item = item[0]
@@ -117,13 +131,22 @@ def update_table_schema(
         raise ValueError(f"Unsupported file type {path.suffix}")
 
     # get columns that have less than 15 unique entries and have no blank entries
-    cols = df.apply(lambda x: x.nunique() < 15 and not x.isnull().any())
+
+    def safe_unique(col: pd.Series) -> bool:
+        # check nunique is under 15
+        # if the series contains any items that is itsef an numpy array - we need to
+        # convert it to a string to avoid a TypeError
+        if any(isinstance(x, (list, tuple, np.ndarray)) for x in col):
+            return False
+        return col.nunique() < 15 and not col.isnull().any()
+
+    cols = df.apply(safe_unique)
     low_count_cols = df.columns.to_series()[cols].to_list()
 
     return Schema.get_table_schema(
         df,
-        descriptions=get_descriptions_from_schema(existing_schema)
-        if existing_schema
-        else {},
+        descriptions=(
+            get_descriptions_from_schema(existing_schema) if existing_schema else {}
+        ),
         enums={x: Schema.USE_UNIQUE for x in low_count_cols},
     )
