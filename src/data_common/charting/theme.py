@@ -4,8 +4,9 @@ just needs to be imported before rendering charts
 Mirrors ggplot theme
 """
 
+from typing import Any, List, Optional
+
 import altair as alt
-from typing import List, Any, Optional
 
 # brand colours
 colours = {

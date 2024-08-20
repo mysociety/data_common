@@ -1,41 +1,32 @@
 from __future__ import annotations
 
+import tempfile
 from functools import wraps
+from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, List, Optional, Protocol, Union
-from unittest.mock import ANY
+from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 import altair as alt  # type: ignore
 import pandas as pd
-from altair_saver import save as altair_save_chart  # type: ignore
-
-from .saver import MSSaver
-
-
-class Renderer:
-    default_renderer = MSSaver
+import requests
+import vl_convert as vlc
+from IPython.core.display import Image as IIMAGE
+from PIL import Image, ImageDraw, ImageFont
 
 
-def save_chart(
-    chart: alt.Chart, filename: str | Path, scale_factor: int = 1, **kwargs: Any
-):
+def logo_url_to_temp(logo_url: str) -> Path:
     """
-    dumbed down version of altair save function that just assumes
-    we're sending extra properties to the embed options
+    download a logo to a temp file
     """
-    if isinstance(filename, Path):
-        # altair doesn't process paths right
-        if filename.parent.exists() is False:
-            filename.parent.mkdir()
-        filename = str(filename)
 
-    altair_save_chart(
-        chart,
-        filename,
-        scale_factor=scale_factor,
-        embed_options=kwargs,
-        method=Renderer.default_renderer,
-    )
+    # get filename from url
+    file_name = logo_url.split("/")[-1]
+    temp_file = Path(tempfile.gettempdir()) / file_name
+    if not temp_file.exists():
+        logo = requests.get(logo_url)
+        with open(temp_file, "wb") as f:
+            f.write(logo.content)
+    return temp_file
 
 
 def split_text_to_line(text: str, cut_off: int = 60) -> List[str]:
@@ -88,6 +79,11 @@ if TYPE_CHECKING:
 else:
     _base = object
 
+logo_urls = {
+    "mysociety": "https://research.mysociety.org/sites/foi-monitor/static/img/mysociety-logo.jpg",
+    "societyworks": "https://blogs.mysociety.org/mysociety/files/2021/04/societyworks-logo-white-background.jpg",
+}
+
 
 class MSDisplayMixIn(_base):
     """
@@ -100,7 +96,9 @@ class MSDisplayMixIn(_base):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._display_options = {"scale_factor": self.__class__.scale_factor}
+        self._display_options: dict[str, Any] = {
+            "scale_factor": self.__class__.scale_factor
+        }
 
     def display_options(self, **kwargs):
         """
@@ -109,15 +107,68 @@ class MSDisplayMixIn(_base):
         self._display_options.update(kwargs)
         return self
 
-    def display(self, *args, **kwargs):
-        # amended to input the default
-        kwargs.update(self._display_options)
-        super().display(*args, **kwargs)
+    def get_pil_image(self) -> Image.Image:
 
-    def save(self, *args, **kwargs):
-        save_args = dict(self._display_options)
-        save_args.update(kwargs)
-        save_chart(self, *args, **save_args)
+        logo = self._display_options.get("logo", False)
+        caption = self._display_options.get("caption", "")
+
+        png_data = vlc.vegalite_to_png(self.to_json(), scale=2)  # type: ignore
+
+        # load the image from the PNG data
+        pil_image = Image.open(BytesIO(png_data))
+
+        if logo or caption:
+
+            # Add a white space to the bottom of the image
+            new_image = Image.new(
+                "RGB", (pil_image.width, pil_image.height + 100), (255, 255, 255)
+            )
+            new_image.paste(pil_image, (0, 0))
+
+        else:
+            return pil_image
+
+        if logo:
+            if logo is True:
+                logo_url = logo_urls["mysociety"]
+            else:
+                logo_url = logo_urls[logo]
+            logo_file = logo_url_to_temp(logo_url)
+            logo_image = Image.open(logo_file)
+
+            # Add the logo to the bottom left
+            new_logo_height = 100
+            new_logo_width = int(logo_image.width * new_logo_height / logo_image.height)
+            downsided_logo = logo_image.resize((new_logo_width, new_logo_height))
+            new_image.paste(downsided_logo, (0, pil_image.height))
+        if caption:
+            caption = "This is a caption."
+            draw = ImageDraw.Draw(new_image)
+
+            font_path = Path("~/.fonts/", "SourceSansPro-Regular.otf").expanduser()
+            font = ImageFont.truetype(font_path, 30)
+            font_length = font.getlength(caption)
+
+            draw.text(
+                (pil_image.width - font_length - 30, pil_image.height + 100 - 50),
+                caption,
+                (0, 0, 0),
+                font=font,
+            )
+
+        return new_image
+
+    def save(self, dest: Path):
+
+        pil_image = self.get_pil_image()
+        pil_image.save(dest)
+
+    def display(self):
+        pil_image = self.get_pil_image()
+        output_bytes = BytesIO()
+        pil_image.save(output_bytes, format="PNG")
+        png_byte_string = output_bytes.getvalue()
+        return IIMAGE(png_byte_string)
 
     def to_dict(self, *args, ignore: Optional[List] = None, **kwargs) -> dict:
         if ignore is None:
