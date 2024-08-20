@@ -1,32 +1,11 @@
 from __future__ import annotations
 
-import tempfile
 from functools import wraps
-from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, List, Optional, Union
+from typing import TYPE_CHECKING, Any, List, Optional, TypedDict, Union
 
 import altair as alt  # type: ignore
 import pandas as pd
-import requests
-import vl_convert as vlc
-from IPython.core.display import Image as IIMAGE
-from PIL import Image, ImageDraw, ImageFont
-
-
-def logo_url_to_temp(logo_url: str) -> Path:
-    """
-    download a logo to a temp file
-    """
-
-    # get filename from url
-    file_name = logo_url.split("/")[-1]
-    temp_file = Path(tempfile.gettempdir()) / file_name
-    if not temp_file.exists():
-        logo = requests.get(logo_url)
-        with open(temp_file, "wb") as f:
-            f.write(logo.content)
-    return temp_file
 
 
 def split_text_to_line(text: str, cut_off: int = 60) -> List[str]:
@@ -58,7 +37,6 @@ class ChartTitle(alt.TitleParams):
         line_limit: int = 60,
         **kwargs: Any,
     ):
-
         if isinstance(title, str):
             title_bits = split_text_to_line(title, line_limit)
         else:
@@ -75,106 +53,63 @@ class ChartTitle(alt.TitleParams):
 
 
 if TYPE_CHECKING:
-    _base = alt.Chart
+    ChartMixinBase = alt.Chart
 else:
-    _base = object
-
-logo_urls = {
-    "mysociety": "https://research.mysociety.org/sites/foi-monitor/static/img/mysociety-logo.jpg",
-    "societyworks": "https://blogs.mysociety.org/mysociety/files/2021/04/societyworks-logo-white-background.jpg",
-}
+    ChartMixinBase = object
 
 
-class MSDisplayMixIn(_base):
+class DisplayProperties(TypedDict):
+    scale_factor: int
+    logo: str
+    caption: str
+
+
+class MSDisplayMixIn(ChartMixinBase):
     """
     mix in that enables a bit more customisation
     of extra display options in the renderer
     """
 
     ignore_properties = ["_display_options"]
-    scale_factor = 1
+    scale_factor = 2
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._display_options: dict[str, Any] = {
-            "scale_factor": self.__class__.scale_factor
+        self._display_options: DisplayProperties = {
+            "scale_factor": self.__class__.scale_factor,
+            "logo": "",
+            "caption": "",
         }
 
-    def display_options(self, **kwargs):
+    def display_options(
+        self,
+        scale_factor: Optional[int] = None,
+        logo: Optional[str] = None,
+        caption: Optional[str] = None,
+    ):
         """
         arguments passed will be sent to display process
         """
-        self._display_options.update(kwargs)
+        if scale_factor is not None:
+            self._display_options["scale_factor"] = scale_factor
+        if logo is not None:
+            self._display_options["logo"] = logo
+        if caption is not None:
+            self._display_options["caption"] = caption
         return self
 
-    def get_pil_image(self) -> Image.Image:
-
-        logo = self._display_options.get("logo", False)
-        caption = self._display_options.get("caption", "")
-
-        png_data = vlc.vegalite_to_png(self.to_json(), scale=2)  # type: ignore
-
-        # load the image from the PNG data
-        pil_image = Image.open(BytesIO(png_data))
-
-        if logo or caption:
-
-            # Add a white space to the bottom of the image
-            new_image = Image.new(
-                "RGB", (pil_image.width, pil_image.height + 100), (255, 255, 255)
-            )
-            new_image.paste(pil_image, (0, 0))
-
-        else:
-            return pil_image
-
-        if logo:
-            if logo is True:
-                logo_url = logo_urls["mysociety"]
-            else:
-                logo_url = logo_urls[logo]
-            logo_file = logo_url_to_temp(logo_url)
-            logo_image = Image.open(logo_file)
-
-            # Add the logo to the bottom left
-            new_logo_height = 100
-            new_logo_width = int(logo_image.width * new_logo_height / logo_image.height)
-            downsided_logo = logo_image.resize((new_logo_width, new_logo_height))
-            new_image.paste(downsided_logo, (0, pil_image.height))
-        if caption:
-            caption = "This is a caption."
-            draw = ImageDraw.Draw(new_image)
-
-            font_path = Path("~/.fonts/", "SourceSansPro-Regular.otf").expanduser()
-            font = ImageFont.truetype(font_path, 30)
-            font_length = font.getlength(caption)
-
-            draw.text(
-                (pil_image.width - font_length - 30, pil_image.height + 100 - 50),
-                caption,
-                (0, 0, 0),
-                font=font,
-            )
-
-        return new_image
-
     def save(self, dest: Path):
-
         pil_image = self.get_pil_image()
         pil_image.save(dest)
-
-    def display(self):
-        pil_image = self.get_pil_image()
-        output_bytes = BytesIO()
-        pil_image.save(output_bytes, format="PNG")
-        png_byte_string = output_bytes.getvalue()
-        return IIMAGE(png_byte_string)
 
     def to_dict(self, *args, ignore: Optional[List] = None, **kwargs) -> dict:
         if ignore is None:
             ignore = []
         ignore += self.__class__.ignore_properties
-        return super().to_dict(*args, ignore=ignore, **kwargs)
+        value = super().to_dict(*args, ignore=ignore, **kwargs)
+        for k in ignore:
+            value["custom"] = {k: getattr(self, k)}
+        return value
 
     # Layering and stacking
     def __add__(self, other):
@@ -210,17 +145,12 @@ class MSDisplayMixIn(_base):
         width: Optional[int] = None,
         height: Optional[int] = None,
         aspect: tuple = (16, 9),
-        logo: bool = False,
-        caption: str = "",
+        logo: Optional[str] = None,
+        caption: Optional[str] = None,
         scale_factor: Optional[int] = None,
         **kwargs,
     ) -> "Chart":
-
         args = {}
-        display_args = {"logo": logo, "caption": caption}
-        if scale_factor:
-            display_args["scale_factor"] = scale_factor
-
         if isinstance(title, str) or isinstance(title, list) or subtitle is not None:
             args["title"] = ChartTitle(
                 title=str(title), subtitle=subtitle, line_limit=title_line_limit
@@ -250,10 +180,14 @@ class MSDisplayMixIn(_base):
             args["autosize"] = alt.AutoSizeParams(type="fit", contains="padding")  # type: ignore
 
         kwargs.update(args)
-        return super().properties(**kwargs).display_options(**display_args)
+        return (
+            super()
+            .properties(**kwargs)
+            .display_options(scale_factor=scale_factor, logo=logo, caption=caption)
+        )
 
 
-class MSDataManagementMixIn(_base):
+class MSDataManagementMixIn(ChartMixinBase):
     """
     Mixin to manage downloading charts
     from the explorer minisites and making it
