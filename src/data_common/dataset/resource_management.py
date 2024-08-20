@@ -97,12 +97,15 @@ class DataResource:
     def slug(self) -> str:
         return self.path.stem
 
-    def get_order(self) -> int:
+    def get_order(self, native_order: int = 999) -> int:
         """
         Get a sheet order if one has been set
         """
         desc = self.get_resource()
-        return desc.get("_sheet_order", 999)
+        old_style = desc.get("_sheet_order", None)
+        if old_style:
+            return old_style
+        return desc.get("custom", []).get("dataset_order", native_order)
 
     @property
     def resource_path(self) -> Path:
@@ -797,7 +800,8 @@ class DataPackage:
             )
 
         resources.sort(key=lambda x: x.slug)
-        resources.sort(key=lambda x: x.get_order())
+        new_order = {r.slug: r.get_order(n) for n, r in enumerate(resources)}
+        resources.sort(key=lambda x: new_order[x.slug])
         return {x.slug: x for x in resources}
 
     @property
