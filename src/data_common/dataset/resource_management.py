@@ -1101,18 +1101,15 @@ class DataPackage:
 
         # sort sheets in order
 
+        ws.write_url(row, 2, f"internal:data_description!A1", string="Data description")
+        ws.write(row, 4, "Field descriptions and metadata for each sheet")
+        row += 1
+
         for r in self.resources().values():
             if r.slug not in allowed_sheets:
                 continue
             desc = r.get_resource()
-            metadata_sheet = f"{r.slug}_metadata"[-31:]
             ws.write_url(row, 2, f"internal:{r.slug}!A1", string=desc["title"])
-            ws.write_url(
-                row,
-                3,
-                f"internal:{metadata_sheet}!A1",
-                string="View column information",
-            )
             ws.write(row, 4, desc["description"])
             row += 1
 
@@ -1180,10 +1177,21 @@ class DataPackage:
 
         sheets: dict[str, pd.DataFrame] = {}
 
+        metadata_sheets: list[pd.DataFrame] = []
+
+        for slug, resource in self.resources().items():
+            if slug in allowed_resource_slugs:
+                mdf = resource.get_metadata_df()
+                mdf["resource"] = slug
+                metadata_sheets.append(mdf)
+
+        metadata_df = pd.concat(metadata_sheets)
+
+        sheets["data_description"] = metadata_df
+
         for slug, resource in self.resources().items():
             if slug in allowed_resource_slugs:
                 sheets[slug] = resource.get_df()
-                sheets[slug + "_metadata"] = resource.get_metadata_df()
 
         excel_path = self.build_path() / f"{self.slug}.xlsx"
 
