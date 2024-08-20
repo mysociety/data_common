@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: 'true'
 
@@ -47,7 +47,7 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          docker-compose build app
+          docker compose build app
           docker tag "$IMAGE_NAME" "$REGISTRY/$IMAGE_NAME"
           for val in $TAGS; do
             docker tag "$IMAGE_NAME" "$val"
