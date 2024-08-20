@@ -1,1 +1,3 @@
-from .duck import duck_query, DuckQuery, DuckUrl
+from .duck import DuckQuery, DuckUrl, duck_query
+
+__all__ = ["DuckQuery", "DuckUrl", "duck_query"]

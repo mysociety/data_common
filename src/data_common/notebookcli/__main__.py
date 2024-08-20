@@ -1,8 +1,10 @@
-import rich_click as click
-from data_common.management.render_processing import DocumentCollection
-from typing import Optional, List
 from pathlib import Path
+from typing import Optional
+
+import rich_click as click
 from rich import print
+
+from data_common.management.render_processing import DocumentCollection
 
 
 class DocCollection:

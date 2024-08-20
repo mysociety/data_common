@@ -4,8 +4,11 @@ from functools import wraps
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, List, Optional, TypedDict, Union
 
-import altair as alt  # type: ignore
+import altair as alt
 import pandas as pd
+from typing_extensions import Self
+
+AnyChart = Union[alt.Chart, alt.LayerChart, alt.HConcatChart, alt.VConcatChart]
 
 
 def split_text_to_line(text: str, cut_off: int = 60) -> List[str]:
@@ -131,7 +134,7 @@ class MSDisplayMixIn(ChartMixinBase):
     def raw_properties(self, *args, **kwargs):
         return super().properties(*args, **kwargs)
 
-    def big_labels(self) -> "Chart":
+    def big_labels(self) -> Self:
         """
         quick helper function to add a bigger label limit
         """
@@ -149,7 +152,7 @@ class MSDisplayMixIn(ChartMixinBase):
         caption: Optional[str] = None,
         scale_factor: Optional[int] = None,
         **kwargs,
-    ) -> "Chart":
+    ) -> Self:
         args = {}
         if isinstance(title, str) or isinstance(title, list) or subtitle is not None:
             args["title"] = ChartTitle(

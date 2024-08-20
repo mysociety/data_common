@@ -1,10 +1,9 @@
 from pathlib import Path
 from typing import Any, Callable, Dict, TypedDict
 
+import numpy as np
 import pandas as pd
 from pandas.io.json import build_table_schema
-import numpy as np
-from data_common.db import duck_query
 
 
 class TypedFieldSchema(TypedDict):

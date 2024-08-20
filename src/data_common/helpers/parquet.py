@@ -1,11 +1,12 @@
+import math
 from pathlib import Path
+
+import geopandas as gpd
+import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-import pandas as pd
-import geopandas as gpd
-import math
-from tqdm import tqdm
 from geopandas.io.arrow import _arrow_to_geopandas
+from tqdm import tqdm
 
 
 def write_split_parquet(

@@ -1,21 +1,22 @@
 from __future__ import annotations
+
 import json
 import shutil
 from copy import deepcopy
 from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
-from typing import Iterable, Optional, Any, Type
-from bs4 import BeautifulSoup, Tag
+from typing import Any, Iterable, Optional, Type
 
 import papermill as pm  # type: ignore
 import pypandoc  # type: ignore
+from bs4 import BeautifulSoup, Tag
 from jinja2 import Template
 from ruamel import yaml  # type: ignore
 
+from ..dataset.jekyll_management import markdown_with_frontmatter
 from . import exporters as exporters
 from .upload import g_drive_upload_and_format
-from ..dataset.jekyll_management import markdown_with_frontmatter
 
 
 def add_tag_based_on_content(input_file: Path, tag: str, content: str):
@@ -338,7 +339,6 @@ class DocumentCollection:
         return cls(all_docs)
 
     def __init__(self, data: dict[str, Any]):
-
         for k, v in data.items():
             if "meta" not in v:
                 data[k]["meta"] = False

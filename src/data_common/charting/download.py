@@ -1,9 +1,8 @@
 import json
-from typing import List, Tuple, Union
+from typing import List
 from urllib.request import urlopen
 
 import altair as alt
-import pandas as pd
 
 from .chart import Chart, LayerChart
 
@@ -31,9 +30,9 @@ def json_to_chart(json_spec: str) -> alt.Chart:
         chart = LayerChart.from_dict(
             {"config": di["config"], "layer": [], "datasets": di["datasets"]}
         )
-        for n, l in enumerate(layers):
+        for n, layer in enumerate(layers):
             di_copy = di.copy()
-            di_copy.update(l)
+            di_copy.update(layer)
             del di_copy["config"]
             del di_copy["$schema"]
             del di_copy["datasets"]

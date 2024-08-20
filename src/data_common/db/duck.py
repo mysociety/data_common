@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Literal, Callable, Protocol, runtime_checkable, Union
+from typing import Any, Callable, Literal, Protocol, runtime_checkable
+
 import duckdb
 import jinja2
 import pandas as pd
@@ -137,8 +138,7 @@ SourceType = Path | DuckUrl | pd.DataFrame
 @runtime_checkable
 class SourceView(Protocol):
     @property
-    def source(self) -> SourceType:
-        ...
+    def source(self) -> SourceType: ...
 
 
 class DuckQuery:

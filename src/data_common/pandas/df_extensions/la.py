@@ -3,14 +3,16 @@ functions and pandas api to speed up working with
 local authority data
 
 """
-import string
-from functools import lru_cache, partial, wraps
-from typing import Callable, List, Optional, overload, Literal
-from data_common.dataset import get_dataset_url
-import numpy as np
-from datetime import datetime, date
 
+import string
+from datetime import date
+from functools import lru_cache, partial, wraps
+from typing import Callable, List, Literal, Optional
+
+import numpy as np
 import pandas as pd
+
+from data_common.dataset import get_dataset_url
 
 la_lookup_url_future = get_dataset_url(
     repo="uk_local_authority_names_and_codes",
@@ -368,4 +370,6 @@ class LocalAuthoritySeriesManipulator(object):
         return self._obj.apply(gss_registry_lookup(allow_none))  # type: ignore
 
 
-LocalAuthorityDataFrameManipulator = pd.api.extensions.register_dataframe_accessor("la")(GovLayers)  # type: ignore
+LocalAuthorityDataFrameManipulator = pd.api.extensions.register_dataframe_accessor(  # type: ignore
+    "la"
+)(GovLayers)

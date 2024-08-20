@@ -1,23 +1,20 @@
+import json
 import os
 import sys
-from functools import lru_cache
 from pathlib import Path
-from sre_constants import ANY
+
 import pandas as pd
 import rich
 import rich_click as click
-
-from rich.panel import Panel
+from click.shell_completion import CompletionItem
 from rich.table import Table
-import json
+from rich.traceback import install
 
+from .jekyll_management import render_jekyll
 from .resource_management import DataPackage
 from .rich_assist import df_to_table
-from .version_management import is_valid_semver
 from .settings import get_settings
-from .jekyll_management import render_jekyll
-
-from rich.traceback import install
+from .version_management import is_valid_semver
 
 # Turn on rich tracebacks
 install(show_locals=False, width=None)
@@ -31,9 +28,6 @@ def valid_packages() -> dict[str, DataPackage]:
     ]
     packages.sort(key=lambda x: x[1].get_datapackage_order())
     return dict(packages)
-
-
-from click.shell_completion import CompletionItem
 
 
 class SlugType(click.ParamType):
@@ -56,6 +50,8 @@ slug_command = click.option(
 )
 
 all_command = click.option("--all", is_flag=True, help="Run for all datasets")
+
+
 #
 @click.group()
 def cli():
@@ -250,7 +246,7 @@ def validate(slug: str = "", all: bool = False):
             rich.print(f"[{color}]{error}[/{color}]")
 
         if not errors:
-            rich.print(f"[green]No errors for package.[/green]")
+            rich.print("[green]No errors for package.[/green]")
         else:
             rich.print("[red]Run `dataset detail` for more information. [/red]")
         if error_count:

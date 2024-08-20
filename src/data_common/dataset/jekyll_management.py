@@ -1,9 +1,10 @@
 import json
+import shutil
 from pathlib import Path
 from typing import Any
-import shutil
-from ruamel.yaml import YAML
+
 import pandas as pd
+from ruamel.yaml import YAML
 
 from .settings import get_settings
 from .version_management import map_versions_to_latest_major_minor

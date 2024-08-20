@@ -1,7 +1,7 @@
-from rich.progress import Progress
-from typing import Optional, Iterable, Callable
-from IPython.display import clear_output
+from typing import Callable, Iterable, Optional
+
 from rich import get_console
+from rich.progress import Progress
 
 console = get_console()
 

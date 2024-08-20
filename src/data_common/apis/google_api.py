@@ -1,5 +1,4 @@
 import socket
-import sys
 from pathlib import Path
 
 from google.oauth2.credentials import Credentials
@@ -23,7 +22,6 @@ class DriveIntegration:
         }
 
     def expand_drive_id(self, drive_id: str) -> str:
-
         if drive_id in self.allowed_drives:
             drive_id = self.allowed_drives[drive_id]
         return drive_id
@@ -157,7 +155,6 @@ class ScriptIntergration:
 
 
 def trigger_log_in_flow(settings: dict):
-
     # If there are no (valid) credentials available, let the user log in.
     data = settings["GOOGLE_APP_JSON"]
     if not data:

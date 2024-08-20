@@ -65,9 +65,9 @@ def render(spec: dict, embed_options: dict[str, Any]) -> MimeBundle:
 
     format_locale = embed_options.get("formatLocale", {})
 
-    png_data = vlc.vegalite_to_png(
+    png_data = vlc.vegalite_to_png(  # type: ignore
         spec, scale=scale_factor, format_locale=format_locale
-    )  # type: ignore
+    )
 
     # load the image from the PNG data
     pil_image = Image.open(BytesIO(png_data))
@@ -95,9 +95,9 @@ def render(spec: dict, embed_options: dict[str, Any]) -> MimeBundle:
         draw = ImageDraw.Draw(new_image)
         if caption_font_url:
             font_path = url_to_temp(caption_font_url)
-            font = ImageFont.truetype(font_path, 30)
+            font = ImageFont.truetype(str(font_path), 30)
         else:
-            font = ImageFont.load_default(size=30)
+            font = ImageFont.load_default(30)
         font_length = font.getlength(caption)
 
         draw.text(

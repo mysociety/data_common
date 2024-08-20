@@ -1,6 +1,7 @@
+from pathlib import Path
+
 import nbformat
 from nbconvert.preprocessors.execute import ExecutePreprocessor
-from pathlib import Path
 
 
 def run_notebook(notebook_filename: Path, save: bool = True):

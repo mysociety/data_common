@@ -1,4 +1,4 @@
-from typing import Any, Callable, Concatenate, Generic, ParamSpec, TypeVar
+from typing import Any, Callable, Concatenate, Generic, ParamSpec
 
 import pandas as pd
 import rich
@@ -18,7 +18,7 @@ class PanelPrint(Generic[_P]):
         self,
         _panel_class: Callable[Concatenate[Group, _P], Any] = Panel,
         *args: _P.args,
-        **kwargs: _P.kwargs
+        **kwargs: _P.kwargs,
     ):
         self.items: list[RenderableType] = []
         self.panel_kwargs = kwargs

@@ -2,7 +2,18 @@ import altair as alt
 
 from . import sw_theme as altair_sw_theme
 from . import theme as altair_theme
-from .chart import Chart, ChartEncoding, ChartTitle, LayerChart
+from .chart import (
+    Chart as Chart,
+)
+from .chart import (
+    ChartEncoding as ChartEncoding,
+)
+from .chart import (
+    ChartTitle as ChartTitle,
+)
+from .chart import (
+    LayerChart as LayerChart,
+)
 from .renderer import Logo, render
 
 alt.themes.register("mysoc_theme", lambda: altair_theme.mysoc_theme)

@@ -7,31 +7,12 @@ import datetime
 import os
 import re
 import unicodedata
-from dataclasses import dataclass
-from functools import partial
 from pathlib import Path
-from typing import Callable, List, Optional, Union
 
-import altair as alt
-import numpy as np
 import pandas as pd
 from IPython.core.display import Markdown as md
 
-from .charting import (
-    Chart,
-    ChartEncoding,
-    ChartTitle,
-    altair_sw_theme,
-    altair_theme,
-    enable_sw_charts,
-    reset_renderer,
-)
-from .pandas.df_extensions import common, space, viz, la
-from .helpers.pipe import iter_format
-from .management.exporters import render_to_html, render_to_markdown
-from .management.settings import settings
-from .progress import Progress, track_progress
-
+from .pandas.df_extensions import la
 
 GovLayers = la.GovLayers
 
@@ -64,8 +45,7 @@ while (Path.cwd() / "pyproject.toml").exists() is False:
     os.chdir("..")
 
 
-def notebook_setup():
-    reset_renderer()
+def notebook_setup(): ...
 
 
 def Date(x):

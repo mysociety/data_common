@@ -1,27 +1,25 @@
+import copy
 import math
 import random
-from functools import reduce, partial
+from functools import reduce
 from itertools import combinations, product
-from typing import Any, Dict, List, Optional, Union, Tuple, Callable
-import copy
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import pandas.api as pd_api
 import seaborn as sns
 from IPython.display import display
-from IPython.core.display import HTML
-from ipywidgets import fixed, interact, interact_manual, interactive
+from ipywidgets import interactive
 from matplotlib.colors import Colormap
-from data_common.charting.theme import mysoc_palette_colors
+from numpy.typing import ArrayLike
 from scipy.spatial.distance import pdist, squareform
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
-from numpy.typing import ArrayLike
-import pandas.api as pd_api
-from pathlib import Path
 
-from . import viz
+from data_common.charting.theme import mysoc_palette_colors
 
 
 def hex_to_rgb(value):
@@ -37,7 +35,7 @@ def fnormalize(s):
 
 class mySocMap(Colormap):
     def __call__(self, X, alpha=None, bytes=False):
-        return mysoc_palette_colors[int(X)]
+        return mysoc_palette_colors[int(X)]  # type: ignore
 
 
 class Cluster:
@@ -262,7 +260,6 @@ class Cluster:
         Plot either all possible x, y graphs for k clusters
         or just the subset with the named x_var and y_var.
         """
-        k = self.k
         df = self.df
 
         num_rows = 3
@@ -290,7 +287,7 @@ class Cluster:
             chart_no += 1
             ax = fig.add_subplot(rows, num_rows, chart_no)
             for c, d in df.groupby("labels"):
-                scatter = ax.scatter(d[x_var], d[y_var], color=color_map[c], label=c)
+                ax.scatter(d[x_var], d[y_var], color=color_map[c], label=c)
 
             ax.set_xlabel(self._axis_label(x_var))
             ax.set_ylabel(self._axis_label(y_var))
@@ -373,7 +370,6 @@ class Cluster:
         """
         Simple description of sample size
         """
-        k = self.k
         if label_lookup is None:
             label_lookup = {}
 
@@ -416,7 +412,6 @@ class Cluster:
         raincloud plot of a variable, grouped by different clusters
 
         """
-        k = self.k
         if use_source:
             df = self.source_df.copy()
         else:
@@ -452,7 +447,8 @@ class Cluster:
         distribution of different variables
         """
         tool = interactive(
-            self.reverse_raincloud, cluster_label=self.get_label_options()  # type: ignore
+            self.reverse_raincloud,
+            cluster_label=self.get_label_options(),  # type: ignore
         )
         display(tool)
 
@@ -494,7 +490,6 @@ class Cluster:
         tool to review how labels assigned for each cluster
 
         """
-        k = self.k
 
         def func(cluster, sort, include_data_labels):
             if sort == "Index":
@@ -523,8 +518,6 @@ class Cluster:
         """
         Review labeled data for a cluster
         """
-
-        k = self.k
 
         def to_count_pivot(df):
             mdf = df.drop(columns=["label"]).melt()
@@ -560,7 +553,6 @@ class Cluster:
         """
         return the original df but with a label column attached
         """
-        k = self.k
         df = self.source_df.copy()
         df["label"] = self.get_cluster_labels(include_short=False)
         df["label_id"] = (
@@ -681,7 +673,7 @@ class SpacePDAccessor(object):
         """
         source_df = self._obj
 
-        if id_col == None:
+        if id_col is None:
             id_col = str(source_df.index.name)
             source_df = source_df.reset_index()
 

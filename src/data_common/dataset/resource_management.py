@@ -19,7 +19,6 @@ import geopandas as gpd
 import pandas as pd
 import pytest
 import rich
-import xlsxwriter
 from frictionless import describe, validate
 from rich.table import Table
 from ruamel.yaml import YAML
@@ -489,13 +488,13 @@ class DataPackage:
         if (p_name := previous_data.get("name")) != (
             c_name := current_data.get("name")
         ):
-            return MAJOR, "Datapackage name changed from {p_name} to {c_name}"
+            return MAJOR, f"Datapackage name changed from {p_name} to {c_name}"
         if (p_identifier := previous_data.get("identifier")) != (
             c_identifier := current_data.get("identifier")
         ):
             return (
                 MAJOR,
-                "Datapackage identifier changed from {p_identifier} to {c_identifier}",
+                f"Datapackage identifier changed from {p_identifier} to {c_identifier}",
             )
 
         # Add, remove or re-order fields
@@ -729,7 +728,7 @@ class DataPackage:
             # check if package is valid
             validation_errors = self.validate(quiet=False)
             if validation_errors:
-                raise ValueError(f"Package is not valid, cannot update version.")
+                raise ValueError("Package is not valid, cannot update version.")
 
             # increment the version in the yaml and update change log
             custom = desc["custom"]
@@ -995,9 +994,9 @@ class DataPackage:
                 resource["custom"]["datasette"] = {}
             if "about" not in resource["custom"]["datasette"]:
                 resource["custom"]["datasette"]["about"] = "Info & Downloads"
-                resource["custom"]["datasette"][
-                    "about_url"
-                ] = f"{self.url}#{resource['name']}"
+                resource["custom"]["datasette"]["about_url"] = (
+                    f"{self.url}#{resource['name']}"
+                )
         if "custom" not in datapackage:
             datapackage["custom"] = {}
         if "dataset_order" not in datapackage["custom"]:
@@ -1105,7 +1104,7 @@ class DataPackage:
 
         # sort sheets in order
 
-        ws.write_url(row, 2, f"internal:data_description!A1", string="Data description")
+        ws.write_url(row, 2, "internal:data_description!A1", string="Data description")
         ws.write(row, 4, "Field descriptions and metadata for each sheet")
         row += 1
 

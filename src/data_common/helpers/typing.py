@@ -1,15 +1,14 @@
+from inspect import signature
 from typing import (
-    get_args,
     Any,
-    Type,
-    TypeVar,
     Callable,
     Generic,
     ParamSpec,
+    Type,
+    TypeVar,
+    get_args,
     get_type_hints,
 )
-
-from inspect import signature
 
 T = TypeVar("T")
 P = ParamSpec("P")

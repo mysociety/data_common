@@ -12,12 +12,11 @@ from bs4 import BeautifulSoup
 from htmltabletomd import convert_table
 from ipython_genutils.text import indent as normal_indent
 from nbconvert import HTMLExporter, MarkdownExporter
+from nbconvert.preprocessors.base import Preprocessor
 from nbconvert.preprocessors.clearmetadata import ClearMetadataPreprocessor
 from nbconvert.preprocessors.clearoutput import ClearOutputPreprocessor
 from nbconvert.preprocessors.execute import ExecutePreprocessor
 from nbconvert.preprocessors.extractoutput import ExtractOutputPreprocessor
-from nbconvert.preprocessors.base import Preprocessor
-
 from traitlets.config import Config  # type: ignore
 
 notebook_render_dir = "_notebook_resources"
@@ -29,7 +28,6 @@ class RemoveOnContent(Preprocessor):
     """
 
     def preprocess(self, nb, resources):
-
         # Filter out cells that meet the conditions
         nb.cells = [
             self.preprocess_cell(cell, resources, index)[0]
@@ -156,7 +154,6 @@ class MarkdownRenderer(object):
         return c
 
     def process(self, input_file=None, output_file=None):
-
         # render clear markdown version of book
         # equiv of `jupyter nbconvert
         # --ClearMetadataPreprocessor.enabled=True
@@ -201,7 +198,6 @@ class MarkdownRenderer(object):
                     f.write(contents)
 
         if self.__class__.markdown_tables:
-
             body = body.replace(
                 '<tr style="text-align: right;">\n      <th></th>', "<tr>"
             )
@@ -257,7 +253,7 @@ class HTML_Renderer(MarkdownRenderer):
 
         c.HTMLExporter.preprocessors = pre_processors
 
-        if self.include_input == False:
+        if self.include_input is False:
             c.HTMLExporter.exclude_input = not self.include_input
             c.HTMLExporter.exclude_input_prompt = not self.include_input
             c.HTMLExporter.exclude_output_prompt = not self.include_input

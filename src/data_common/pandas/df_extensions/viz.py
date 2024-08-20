@@ -1,12 +1,10 @@
-from typing import List, Optional, Dict
-import pandas as pd
+from typing import List, Optional
 
+import matplotlib.pyplot as plt
+import pandas as pd
+import pandas.api as pd_api
 import ptitprince as pt
 import seaborn as sns
-import matplotlib.collections as clt
-import matplotlib.pyplot as plt
-
-import pandas.api as pd_api
 
 sns.set(style="whitegrid", font_scale=1, font="Source Sans Pro")
 
