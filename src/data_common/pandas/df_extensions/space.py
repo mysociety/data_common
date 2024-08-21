@@ -14,7 +14,6 @@ import seaborn as sns
 from IPython.display import display
 from ipywidgets import interactive
 from matplotlib.colors import Colormap
-from numpy.typing import ArrayLike
 from scipy.spatial.distance import pdist, squareform
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
@@ -198,7 +197,7 @@ class Cluster:
 
         # create mapping of the new (and possibly random numbers) to the ones we've previously assigned labels.
 
-        return mapping.to_dict()
+        return mapping.to_dict()  # type: ignore
 
     def get_label_options(self) -> list:
         return [self.get_label_name(x) for x in range(1, self.k + 1)]
@@ -209,7 +208,7 @@ class Cluster:
             labels = labels.map(self.cluster_no_mapping)
         return labels
 
-    def get_cluster_labels(self, include_short=True) -> ArrayLike:
+    def get_cluster_labels(self, include_short=True) -> np.ndarray:
         labels = self.get_cluster_label_ids()
 
         def f(x):
@@ -220,7 +219,7 @@ class Cluster:
 
     label_array = get_cluster_labels
 
-    def get_cluster_descs(self) -> ArrayLike:
+    def get_cluster_descs(self) -> np.ndarray:
         labels = self.get_cluster_label_ids()
         labels = labels.apply(lambda x: self.get_label_desc(n=x))
         return np.array(labels)
@@ -350,7 +349,7 @@ class Cluster:
         df = pd.DataFrame({"n": range(start, stop, step)})
         df["k_means"] = df["n"].apply(self.get_clusters)
         df["sum_squares"] = df["k_means"].apply(lambda x: x.inertia_)
-        df["silhouette"] = df["k_means"].apply(s_score)
+        df["silhouette"] = df["k_means"].apply(s_score)  # type: ignore
 
         plt.rcParams["figure.figsize"] = (10, 5)  # type: ignore
         plt.subplot(1, 2, 1)
