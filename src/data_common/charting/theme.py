@@ -141,11 +141,14 @@ mysoc_theme = {
     "config": {
         "padding": {"left": 5, "top": 5, "right": 20, "bottom": 5},
         "title": {
+            "align": "left",
             "font": font,
             "fontSize": 30,
             "anchor": "start",
             "subtitleFontSize": 20,
-            "subtitleFont": "Source Sans Pro",
+            "subtitleFont": font,
+            "subtitlePadding": 10,
+            "dx": -1,
         },
         "axis": {
             "labelFont": font,

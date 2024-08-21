@@ -10,6 +10,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 from .str_enum import StrEnum
 
+chart_temp_dir = Path(tempfile.gettempdir()) / "mysoc_charting"
+
 
 class Logo(StrEnum):
     MYSOCIETY = (
@@ -26,8 +28,9 @@ def url_to_temp(file_url: str) -> Path:
     """
     # get filename from url
     file_name = file_url.split("/")[-1]
-    temp_file = Path(tempfile.gettempdir()) / file_name
+    temp_file = chart_temp_dir / file_name
     if not temp_file.exists():
+        chart_temp_dir.mkdir(exist_ok=True)
         logo = requests.get(file_url)
         with open(temp_file, "wb") as f:
             f.write(logo.content)
@@ -61,9 +64,24 @@ def render(spec: dict, embed_options: dict[str, Any]) -> MimeBundle:
     scale_factor = display["scale_factor"]
     logo = display["logo"] or embed_options.get("logo", "")
     caption = display["caption"]
-    caption_font_url = embed_options.get("caption_font_url", "")
+    caption_font = embed_options.get("caption_font", "")
+    fonts_to_load = embed_options.get("fonts_to_load", [])
+
+    chart_temp_dir.mkdir(exist_ok=True)
+    font_paths = [url_to_temp(font) for font in fonts_to_load]
+    caption_font_path = None
+    if caption_font:
+        caption_font_path = [x for x in font_paths if caption_font == x.name]
+        if len(caption_font_path) == 1:
+            caption_font_path = caption_font_path[0]
+        elif len(caption_font_path) > 1:
+            raise ValueError(f"Multiple fonts with the same name: {caption_font_path}")
+        else:
+            raise ValueError(f"Font not found: {caption_font}")
 
     format_locale = embed_options.get("formatLocale", {})
+
+    vlc.register_font_directory(str(chart_temp_dir))  # type: ignore
 
     png_data = vlc.vegalite_to_png(  # type: ignore
         spec, scale=scale_factor, format_locale=format_locale
@@ -93,9 +111,8 @@ def render(spec: dict, embed_options: dict[str, Any]) -> MimeBundle:
         new_image.paste(downsided_logo, (0, pil_image.height))
     if caption:
         draw = ImageDraw.Draw(new_image)
-        if caption_font_url:
-            font_path = url_to_temp(caption_font_url)
-            font = ImageFont.truetype(str(font_path), 30)
+        if caption_font_path:
+            font = ImageFont.truetype(str(caption_font_path), 30)
         else:
             font = ImageFont.load_default(30)
         font_length = font.getlength(caption)

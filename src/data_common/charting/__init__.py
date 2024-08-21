@@ -19,31 +19,46 @@ from .renderer import Logo, render
 alt.themes.register("mysoc_theme", lambda: altair_theme.mysoc_theme)
 alt.themes.enable("mysoc_theme")
 
-gb_format = {"decimal": ".", "thousands": ",", "grouping": [3], "currency": ["£", ""]}
 
-alt.renderers.register("mysoc_saver", render)  # type: ignore
-alt.renderers.enable("mysoc_saver")
-alt.renderers.set_embed_options(formatLocale=gb_format)
+gb_format = {
+    "decimal": ".",
+    "thousands": ",",
+    "grouping": [3],
+    "currency": ["£", ""],
+}
 
 
-def enable_ms_charts():
+def enable_ms_charts(include_renderer: bool = True):
     alt.themes.register("mysoc_theme", lambda: altair_theme.mysoc_theme)
     alt.themes.enable("mysoc_theme")
-    alt.renderers.set_embed_options(
-        formatLocale=gb_format,
-        logo=Logo.MYSOCIETY,
-        caption_font_url="https://github.com/nteract/assets/raw/master/fonts/source-sans-pro/WOFF/OTF/SourceSansPro-Regular.otf.woff",
-    )
+    if include_renderer:
+        alt.renderers.register("mysoc_saver", render)  # type: ignore
+        alt.renderers.enable("mysoc_saver")
+        alt.renderers.set_embed_options(
+            formatLocale=gb_format,
+            logo=Logo.MYSOCIETY,
+            caption_font="SourceSansPro-Regular.otf.woff",
+            fonts_to_load=[
+                "https://github.com/nteract/assets/raw/master/fonts/source-sans-pro/WOFF/OTF/SourceSansPro-Regular.otf.woff"
+            ],
+        )
+    else:
+        alt.renderers.set_embed_options(formatLocale=gb_format)
 
 
-def enable_sw_charts():
+def enable_sw_charts(include_renderer: bool = True):
     alt.themes.register("societyworks_theme", lambda: altair_sw_theme.sw_theme)
     alt.themes.enable("societyworks_theme")
-    alt.renderers.set_embed_options(
-        formatLocale=gb_format,
-        logo=Logo.SOCIETYWORKS,
-        caption_font_url="https://github.com/google/fonts/raw/main/ofl/lato/Lato-Regular.ttf",
-    )
-
-
-enable_ms_charts()
+    if include_renderer:
+        alt.renderers.register("mysoc_saver", render)  # type: ignore
+        alt.renderers.enable("mysoc_saver")
+        alt.renderers.set_embed_options(
+            formatLocale=gb_format,
+            logo=Logo.SOCIETYWORKS,
+            caption_font="Lato-Regular.ttf",
+            fonts_to_load=[
+                "https://github.com/google/fonts/raw/main/ofl/lato/Lato-Regular.ttf"
+            ],
+        )
+    else:
+        alt.renderers.set_embed_options(formatLocale=gb_format)
