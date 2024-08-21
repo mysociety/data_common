@@ -6,7 +6,7 @@ export PATH="/root/.local/bin:$PATH"
 poetry config virtualenvs.create false
 
 # Add uv
-$ curl -LsSf https://astral.sh/uv/install.sh | sh
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
 curl -s https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - \
       && echo 'deb https://deb.nodesource.com/node_14.x buster main' > /etc/apt/sources.list.d/nodesource.list
