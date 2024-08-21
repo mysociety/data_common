@@ -2,7 +2,6 @@
 functions to speed up and pretify notebooks
 """
 
-import builtins as __builtin__
 import datetime
 import os
 import re
@@ -11,12 +10,6 @@ from pathlib import Path
 
 import pandas as pd
 from IPython.core.display import Markdown as md
-
-from .pandas.df_extensions import la
-
-GovLayers = la.GovLayers
-
-builtin_print = __builtin__.print
 
 pd.options.mode.chained_assignment = None
 pd.set_option("display.precision", 2)
@@ -39,13 +32,13 @@ def page_break():
     )
 
 
-while "notebooks" in Path.cwd().parts:
-    os.chdir("..")
-while (Path.cwd() / "pyproject.toml").exists() is False:
-    os.chdir("..")
+def set_top_level():
+    while (Path.cwd() / "pyproject.toml").exists() is False:
+        os.chdir("..")
 
 
-def notebook_setup(): ...
+def notebook_setup():
+    set_top_level()
 
 
 def Date(x):
