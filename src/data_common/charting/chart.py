@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import wraps
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, List, Optional, TypedDict, Union
 
 import altair as alt
@@ -101,18 +100,28 @@ class MSDisplayMixIn(ChartMixinBase):
             self._display_options["caption"] = caption
         return self
 
-    def save(self, dest: Path):
-        pil_image = self.get_pil_image()
-        pil_image.save(dest)
+    def display(self, *args, **kwargs):
+        """
+        Display the chart
+        """
+
+        custom = {k: getattr(self, k) for k in self.__class__.ignore_properties}
+        kwargs["custom"] = custom
+        super().display(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        """
+        Save the chart
+        """
+        custom = {k: getattr(self, k) for k in self.__class__.ignore_properties}
+        kwargs["custom"] = custom
+        super().save(*args, **kwargs)
 
     def to_dict(self, *args, ignore: Optional[List] = None, **kwargs) -> dict:
         if ignore is None:
             ignore = []
         ignore += self.__class__.ignore_properties
-        value = super().to_dict(*args, ignore=ignore, **kwargs)
-        for k in ignore:
-            value["custom"] = {k: getattr(self, k)}
-        return value
+        return super().to_dict(*args, ignore=ignore, **kwargs)
 
     # Layering and stacking
     def __add__(self, other):
@@ -130,7 +139,6 @@ class MSDisplayMixIn(ChartMixinBase):
             raise ValueError("Only Chart objects can be concatenated.")
         return hconcat(self, other)
 
-    @wraps(alt.Chart.properties)
     def raw_properties(self, *args, **kwargs):
         return super().properties(*args, **kwargs)
 

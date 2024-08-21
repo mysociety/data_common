@@ -58,7 +58,7 @@ def pil_image_to_mimebundle(img: Image.Image) -> MimeBundle:
 
 
 def render(spec: dict, embed_options: dict[str, Any]) -> MimeBundle:
-    display = spec.get("custom", {}).get(
+    display = embed_options.get("custom", {}).get(
         "_display_options", {"scale_factor": 1, "logo": "", "caption": ""}
     )
     scale_factor = display["scale_factor"]
