@@ -46,7 +46,7 @@ This currently contains two templates.
 - `src/data_common` - submodule for the `data_common` repo that contains common tools and helper libraries.
 - `src/[repo_name]` - where you should put specific python scripts for this repository. 
 - `tests` - directory for pytest tests. 
-- `Dockerfile.dev` - The Dockerfile for this repo. Is locked to the `data_common` image at the latest commit when the repo was upgraded. This can be updated if you make changes that require a new docker setup. 
+- `Dockerfile` - The Dockerfile for this repo. Is locked to the `data_common` image at the latest commit when the repo was upgraded. This can be updated if you make changes that require a new docker setup. 
 
 # Code formatting and conventions
 
@@ -199,10 +199,6 @@ from data_common.notebook import *
 ```
 
 This will load common libraries like Pandas, Altair, and numpy, as well as the mySociety customisation of these. It will also set the current working directory to the root of the project.
-
-### Binder
-
-[Binder](https://mybinder.org/) is a tool for demoing and using jupyter notebooks online. Binder links are automatically generated for the repo using the cookiecutter template. This will only work with repos that do not require secrets (these can not safely be loaded into binder).
 
 # Rendering
 
