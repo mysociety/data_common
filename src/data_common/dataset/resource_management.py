@@ -1042,9 +1042,9 @@ class DataPackage:
         desc = self.get_datapackage()
         settings = get_settings()
 
-        bold = writer.book.add_format({"bold": True})
+        bold = writer.book.add_format({"bold": True})  # type: ignore
 
-        ws = writer.book.add_worksheet("package_description")
+        ws = writer.book.add_worksheet("package_description")  # type: ignore
         ws.set_column(2, 2, 40)
         ws.set_column(3, 3, 30)
         ws.write(2, 2, "Dataset", bold)
@@ -1200,7 +1200,7 @@ class DataPackage:
 
         writer = pd.ExcelWriter(excel_path)
         writer = self.build_coversheet(writer, allowed_sheets=allowed_resource_slugs)
-        text_wrap = writer.book.add_format({"text_wrap": True})
+        text_wrap = writer.book.add_format({"text_wrap": True})  # type: ignore
 
         for sheet_name, df in sheets.items():
             short_sheet_name = sheet_name[-31:]  # only allow 31 characters
@@ -1210,7 +1210,7 @@ class DataPackage:
             df.to_excel(writer, sheet_name=short_sheet_name, index=False)
 
             for column in df:
-                column_length = max(df[column].astype(str).map(len).max(), len(column))
+                column_length = max(df[column].astype(str).map(len).max(), len(column))  # type: ignore
                 column_length += 4
 
                 col_idx = df.columns.get_loc(column)
@@ -1223,7 +1223,7 @@ class DataPackage:
                         col_idx, col_idx, 50, text_wrap
                     )
 
-        writer.save()
+        writer.save()  # type: ignore
 
     def build_sqlite(self, is_geodata: bool = False):
         """

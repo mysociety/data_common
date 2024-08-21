@@ -12,7 +12,7 @@ class CommonSeriesAccessor(object):
         self._obj = pandas_obj
 
     def update_from_map(self, map: dict) -> pd.Series:
-        return self._obj.apply(lambda x: map.get(x, x))
+        return self._obj.apply(lambda x: map.get(x, x))  # type:ignore
 
 
 @pd_api.extensions.register_dataframe_accessor("common")

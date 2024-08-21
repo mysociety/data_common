@@ -180,7 +180,7 @@ class GovLayers:
         adf = get_la_df(include_historical=include_historical, as_of_date=as_of_date)
         if items:
             adf = adf[["local-authority-code"] + items]
-        return df.merge(adf, how=merge_type)
+        return df.merge(adf, how=merge_type)  # type: ignore
 
     def just_lower_tier(self) -> pd.DataFrame:
         """

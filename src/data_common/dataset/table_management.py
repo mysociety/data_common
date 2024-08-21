@@ -111,7 +111,7 @@ class Schema:
         Produce a table data schema for the dataframe
         https://specs.frictionlessdata.io/table-schema/
         """
-        data: SchemaValidator = build_table_schema(df, index=False, version=False)
+        data: SchemaValidator = build_table_schema(df, index=False, version=False)  # type: ignore
         data["fields"] = [
             cls.enhance_field(df, field, descriptions, enums)
             for field in data["fields"]
