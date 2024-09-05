@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from .str_enum import StrEnum
 
-chart_temp_dir = Path(tempfile.gettempdir()) / "mysoc_charting"
+chart_download_path = Path(tempfile.gettempdir()) / "mysoc_charting"
 
 
 class Logo(StrEnum):
@@ -28,9 +28,9 @@ def url_to_temp(file_url: str) -> Path:
     """
     # get filename from url
     file_name = file_url.split("/")[-1]
-    temp_file = chart_temp_dir / file_name
+    temp_file = chart_download_path / file_name
     if not temp_file.exists():
-        chart_temp_dir.mkdir(exist_ok=True)
+        chart_download_path.mkdir(exist_ok=True)
         logo = requests.get(file_url)
         with open(temp_file, "wb") as f:
             f.write(logo.content)
@@ -67,7 +67,7 @@ def render(spec: dict, embed_options: dict[str, Any]) -> MimeBundle:
     caption_font = embed_options.get("caption_font", "")
     fonts_to_load = embed_options.get("fonts_to_load", [])
 
-    chart_temp_dir.mkdir(exist_ok=True)
+    chart_download_path.mkdir(exist_ok=True)
     font_paths = [url_to_temp(font) for font in fonts_to_load]
     caption_font_path = None
     if caption_font:
@@ -81,7 +81,7 @@ def render(spec: dict, embed_options: dict[str, Any]) -> MimeBundle:
 
     format_locale = embed_options.get("formatLocale", {})
 
-    vlc.register_font_directory(str(chart_temp_dir))  # type: ignore
+    vlc.register_font_directory(str(chart_download_path))  # type: ignore
 
     png_data = vlc.vegalite_to_png(  # type: ignore
         spec, scale=scale_factor, format_locale=format_locale
