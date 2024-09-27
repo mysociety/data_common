@@ -91,7 +91,10 @@ class Notebook:
         else:
             add_tag_based_on_content(actual_path, "parameters", "#default-params")
             pm.execute_notebook(  # type: ignore
-                actual_path, self.papermill_path(slug), parameters=params
+                actual_path,
+                self.papermill_path(slug),
+                parameters=params,
+                kernel_name="python3",
             )
 
     def rendered_filename(self, slug: str, ext: str = ".md") -> Path:
