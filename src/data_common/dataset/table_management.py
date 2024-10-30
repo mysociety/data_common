@@ -42,7 +42,12 @@ def get_example(series: pd.Series) -> str | int | float:
         item = series
     if len(item) == 0:
         return ""
-    item = item[0]
+    if isinstance(item, dict):
+        return str(item)
+    if isinstance(item, pd.Series):
+        item = item.iloc[0]
+    else:
+        item = str(item[0])
     if isinstance(item, bool):
         return str(item)
     if isinstance(item, float):

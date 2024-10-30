@@ -104,7 +104,7 @@ class DataResource:
         old_style = desc.get("_sheet_order", None)
         if old_style:
             return old_style
-        return desc.get("custom", []).get("dataset_order", native_order)
+        return desc.get("custom", {}).get("dataset_order", native_order)
 
     @property
     def resource_path(self) -> Path:
