@@ -16,6 +16,7 @@ from typing import Any, Callable, Literal, TypedDict, TypeVar, cast
 from urllib.parse import urlencode
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import pytest
 import rich
@@ -1338,8 +1339,12 @@ class DataPackage:
                 else:
                     raise ValueError(f"Unrecognised modify type {modify_type}")
 
+        def custom_converter(o):
+            if isinstance(o, np.ndarray):
+                return list(o)
+
         with open(self.build_path() / f"{self.slug}.json", "w") as f:
-            json.dump(datapackage, f, indent=4)
+            json.dump(datapackage, f, indent=4, default=custom_converter)
 
     def build_composites(self):
         """
