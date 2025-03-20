@@ -32,12 +32,13 @@ def is_unique(series: pd.Series) -> bool:
     This function takes in a series and returns a boolean of whether or not all the values in the series are unique.
     """
 
-    return len(series) == len(expand_array(series).unique())
+    return len(series) == len(expand_array(series).astype(str).unique())
 
 
 def get_example(series: pd.Series) -> str | int | float:
     try:
-        item = sorted(list(series.dropna()))
+        str_series = series.dropna().apply(str)
+        item = sorted(list(str_series))
     except ValueError:
         item = series
     if len(item) == 0:
@@ -142,7 +143,8 @@ def update_table_schema(
         # convert it to a string to avoid a TypeError
         if any(isinstance(x, (list, tuple, np.ndarray)) for x in col):
             return False
-        return col.nunique() < 15 and not col.isnull().any()
+        str_col = col.apply(str)
+        return str_col.nunique() < 15 and not str_col.isnull().any()
 
     cols = df.apply(safe_unique)
     low_count_cols = df.columns.to_series()[cols].to_list()
