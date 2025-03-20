@@ -102,7 +102,10 @@ class Schema:
                 field["constraints"]["enum"] = enum_value.process(col)
             if isinstance(field["constraints"]["enum"], list):
                 # sort the enum values
-                field["constraints"]["enum"] = sorted(field["constraints"]["enum"])
+                non_none_enums = [
+                    x for x in field["constraints"]["enum"] if x is not None
+                ]
+                field["constraints"]["enum"] = sorted(non_none_enums)
         return field
 
     @classmethod
