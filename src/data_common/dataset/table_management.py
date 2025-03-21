@@ -8,6 +8,7 @@ from pandas.io.json import build_table_schema
 
 class TypedFieldSchema(TypedDict):
     name: str
+    type: str
     example: str | int | float
     constraints: dict[str, Any]
     description: str | None
