@@ -11,4 +11,4 @@ RUN cd /setup/src/data_commmon/ \
     && mkdir --parents /setup/src/data_common/src/data_common \
     && touch /setup/src/data_common/src/data_common__init__.py \
     && export PATH="/root/.local/bin:$PATH" \
-    && cd /setup/src/data_commmon/ && poetry install 
+    && cd /setup/src/data_commmon/ && poetry install --no-root
