@@ -1,26 +1,23 @@
-import json
 import os
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import pandas as pd
 import rich
 import rich_click as click
-from click.shell_completion import CompletionItem
-from rich.table import Table
 from rich.traceback import install
 
-from .jekyll_management import render_jekyll
-from .resource_management import DataPackage
-from .rich_assist import df_to_table
-from .settings import get_settings
-from .version_management import is_valid_semver
+if TYPE_CHECKING:
+    from .resource_management import DataPackage
 
 # Turn on rich tracebacks
 install(show_locals=False, width=None)
 
 
-def valid_packages() -> dict[str, DataPackage]:
+def valid_packages() -> dict[str, "DataPackage"]:
+    from .resource_management import DataPackage
+    from .settings import get_settings
+
     settings = get_settings()
     packages = [
         (x.parent.stem, DataPackage(x.parent))
@@ -34,6 +31,8 @@ class SlugType(click.ParamType):
     name = "envvar"
 
     def shell_complete(self, ctx, param, incomplete):
+        from click.shell_completion import CompletionItem
+
         return [CompletionItem(x) for x in valid_packages() if x.startswith(incomplete)]
 
 
@@ -68,6 +67,13 @@ def cli():
 )
 def list_command(as_json: bool = False, no_validate: bool = False):
     """List all datasets"""
+    import json
+
+    import pandas as pd
+    from rich.table import Table
+
+    from .rich_assist import df_to_table
+
     packages = valid_packages()
 
     df = pd.DataFrame(
@@ -95,7 +101,7 @@ def list_command(as_json: bool = False, no_validate: bool = False):
         rich.print(json.dumps(df.to_dict(orient="records")))
 
 
-def get_relevant_packages(slug: str, all: bool) -> list[DataPackage]:
+def get_relevant_packages(slug: str, all: bool) -> list["DataPackage"]:
     valid = valid_packages()
     current_stem = Path(os.getcwd()).stem
     if len(valid) == 1 or all:
@@ -167,6 +173,8 @@ def version(
     prerelease: str = "",
 ):
     """Change the packages version if valid semvar, or bumps automatically if one of MAJOR MINOR PATCH AUTO"""
+    from .version_management import is_valid_semver
+
     if version_or_rule is None:
         version_or_rule = "DISPLAY"
     if "-" in version_or_rule:
@@ -223,6 +231,8 @@ def create(slug: str = "", all: bool = False):
     """Create a new directory for a dataset with a basic template."""
     from cookiecutter.main import cookiecutter
 
+    from .settings import get_settings
+
     template_dir = Path(__file__).parent.parent / "resources" / "dataset_template"
     dataset_dir = get_settings()["dataset_dir"]
     final_dir = cookiecutter(str(template_dir), output_dir=str(dataset_dir))
@@ -274,6 +284,7 @@ def publish(slug: str = "", all: bool = False):
     """
     Render any missing versions and move them to the jekyll data directory.
     """
+    from .jekyll_management import render_jekyll
 
     packages = get_relevant_packages(slug, all)
     for p in packages:
@@ -290,6 +301,8 @@ def render():
     Build Jekyll pages from the Jekyll's data directory.
     Run as part of build.
     """
+    from .jekyll_management import render_jekyll
+
     rich.print("Building Jekyll markdown files")
     render_jekyll()
 
