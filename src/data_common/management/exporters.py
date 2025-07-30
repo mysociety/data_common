@@ -204,16 +204,16 @@ class MarkdownRenderer(object):
             soup = BeautifulSoup(body, "html.parser")
 
             for div in soup.find_all("pagebreak"):
-                div.replaceWith('<div style="page-break-after: always"></div>')
+                div.replaceWith('<div style="page-break-after: always"></div>')  # type: ignore
 
             for div in soup.find_all("div"):
                 table = convert_table(str(div))
-                div.replaceWith(table)
+                div.replaceWith(table)  # type: ignore
 
             for div in soup.find_all("table"):
                 table = convert_table(str(div))
 
-                div.replaceWith(table)
+                div.replaceWith(table)  # type: ignore
 
             body = str(soup)
             body = body.replace("&lt;br/&gt;", "<br/>")

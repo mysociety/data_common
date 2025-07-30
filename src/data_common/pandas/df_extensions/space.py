@@ -78,7 +78,7 @@ class Cluster:
             df = df.set_index(id_col)
             label_df = label_df.set_index(id_col)
         else:
-            id_col = df.index.name
+            id_col = df.index.name  # type: ignore
 
         if label_cols:
             df: pd.DataFrame = df.drop(columns=label_cols)  # type: ignore
@@ -86,7 +86,7 @@ class Cluster:
             label_cols = []
 
         if cols:
-            df = df[cols]
+            df = df[cols]  # type: ignore
         else:
 
             def t(x):

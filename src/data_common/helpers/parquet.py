@@ -5,7 +5,7 @@ import geopandas as gpd
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-from geopandas.io.arrow import _arrow_to_geopandas
+from geopandas.io.arrow import _arrow_to_geopandas  # type: ignore
 from tqdm import tqdm
 
 

@@ -16,7 +16,7 @@ from .chart import (
 )
 from .renderer import Logo, render
 
-alt.themes.register("mysoc_theme", lambda: altair_theme.mysoc_theme)
+alt.themes.register("mysoc_theme", lambda: altair_theme.mysoc_theme)  # type: ignore
 alt.themes.enable("mysoc_theme")
 
 
@@ -29,7 +29,7 @@ gb_format = {
 
 
 def enable_ms_charts(include_renderer: bool = True):
-    alt.themes.register("mysoc_theme", lambda: altair_theme.mysoc_theme)
+    alt.themes.register("mysoc_theme", lambda: altair_theme.mysoc_theme)  # type: ignore
     alt.themes.enable("mysoc_theme")
     if include_renderer:
         alt.renderers.register("mysoc_saver", render)  # type: ignore
@@ -47,7 +47,7 @@ def enable_ms_charts(include_renderer: bool = True):
 
 
 def enable_sw_charts(include_renderer: bool = True):
-    alt.themes.register("societyworks_theme", lambda: altair_sw_theme.sw_theme)
+    alt.themes.register("societyworks_theme", lambda: altair_sw_theme.sw_theme)  # type: ignore
     alt.themes.enable("societyworks_theme")
     if include_renderer:
         alt.renderers.register("mysoc_saver", render)  # type: ignore
