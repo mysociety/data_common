@@ -933,7 +933,7 @@ class DataPackage:
         # but we don't want to export
         exclude = ""
         if desc["custom"].get("is_geodata", False):
-            exclude = "EXCLUDE (__index_level_0__, geometry)"
+            exclude = "EXCLUDE (geometry)"
 
         parquet_copy_query = """
         copy (select * {{ exclude }} from {{ source }}) to {{ dest }} (HEADER, DELIMITER ',');
