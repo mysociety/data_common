@@ -433,7 +433,7 @@ class Cluster:
         df = df.melt("Cluster")
         df = df.loc[lambda df: ~(df["variable"] == " ")]
         df["value"] = df["value"].astype(float)
-        df = df.loc[lambda df: (df["Cluster"] == cluster_label)]
+        df = df.loc[lambda df: df["Cluster"] == cluster_label]
         df.viz.raincloud(
             values="value",
             groups="variable",
