@@ -1224,7 +1224,7 @@ class DataPackage:
                         col_idx, col_idx, 50, text_wrap
                     )
 
-        writer.save()  # type: ignore
+        writer.close()
 
     def build_sqlite(self, is_geodata: bool = False):
         """
