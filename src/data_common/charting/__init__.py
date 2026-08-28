@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING, Any
+
 import altair as alt
 
 from . import sw_theme as altair_sw_theme
@@ -14,7 +16,23 @@ from .chart import (
 from .chart import (
     LayerChart as LayerChart,
 )
-from .renderer import Logo, render
+
+if TYPE_CHECKING:
+    from .renderer import Logo as Logo
+    from .renderer import render as render
+
+
+def __getattr__(name: str) -> Any:
+    if name == "Logo":
+        from .renderer import Logo
+
+        return Logo
+    if name == "render":
+        from .renderer import render
+
+        return render
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 alt.themes.register("mysoc_theme", lambda: altair_theme.mysoc_theme)  # type: ignore
 alt.themes.enable("mysoc_theme")
@@ -32,6 +50,8 @@ def enable_ms_charts(include_renderer: bool = True):
     alt.themes.register("mysoc_theme", lambda: altair_theme.mysoc_theme)  # type: ignore
     alt.themes.enable("mysoc_theme")
     if include_renderer:
+        from .renderer import Logo, render
+
         alt.renderers.register("mysoc_saver", render)  # type: ignore
         alt.renderers.enable("mysoc_saver")
         alt.renderers.set_embed_options(
@@ -50,6 +70,8 @@ def enable_sw_charts(include_renderer: bool = True):
     alt.themes.register("societyworks_theme", lambda: altair_sw_theme.sw_theme)  # type: ignore
     alt.themes.enable("societyworks_theme")
     if include_renderer:
+        from .renderer import Logo, render
+
         alt.renderers.register("mysoc_saver", render)  # type: ignore
         alt.renderers.enable("mysoc_saver")
         alt.renderers.set_embed_options(

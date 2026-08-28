@@ -16,7 +16,6 @@ from ruamel import yaml  # type: ignore
 
 from ..dataset.jekyll_management import markdown_with_frontmatter
 from . import exporters as exporters
-from .upload import g_drive_upload_and_format
 
 
 def add_tag_based_on_content(input_file: Path, tag: str, content: str):
@@ -292,6 +291,8 @@ class Document:
                     dirs_exist_ok=True,
                 )
             if k == "gdrive":
+                from .upload import g_drive_upload_and_format
+
                 file_name = self._rendered_data["title"]
                 file_path = self.rendered_filename(".docx")
                 g_drive_upload_and_format(
