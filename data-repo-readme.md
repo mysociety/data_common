@@ -14,17 +14,15 @@ All the config required for that also means it works well locally using VS Code 
 
 To run a single script from outside the container, `docker compose run [x]` should work well. 
 
-The project (in most cases) can be run without docker at all. If python 3.10 is installed locally, you can [install poetry](https://python-poetry.org/) and provision that way:
+The project can usually be run without Docker. Install [uv](https://docs.astral.sh/uv/) and provision the locked environment:
 
 ```bash
-pip install poetry
 script/setup
-python -m poetry install
-python -m poetry shell
-# now in virtual environment
+uv sync
+uv run dataset --help
 ```
 
-This approach will not (without more manual work) produce the mySociety branded charts well, as that is dependent a selenium setup in the dockerfile. It can handle the dataset tool though. 
+This approach handles the dataset tool. Branded chart output may still need the fonts and system packages installed by the Docker image.
 
 # Setting up automated testing/building of github pages
 
@@ -52,12 +50,12 @@ This currently contains two templates.
 
 This repo uses:
 
-- Poetry for dependency management and CLI configuration. 
-- Black formatting for Python,
+- uv for dependency management, locking and CLI execution.
+- Ruff for Python linting and formatting.
 - Pyright's '[basic](https://github.com/microsoft/pyright/blob/main/docs/configuration.md)' type checking for Python. This does not require typing, but highlights issues when known, so projects benefit from having more typing.
 - The primary branch is `main`.
 
-Black and Pyright are enforced by `script/test`. This should in many cases be undemanding, but can be disabled by modifying it from the `script/test` file.
+Ruff and Pyright are enforced by `script/test`. This should in many cases be undemanding, but can be disabled by modifying it from the `script/test` file.
 
 See also the general [mySociety coding standards](https://pages.mysociety.org/coding-standards.html). 
 
@@ -152,7 +150,7 @@ PATCH version when you make backwards-compatible fixes, e.g.
 
 This follows the general pattern that before the first major release nothing is stable, and all major changes before v1 can be designated as minor changes. 
 
-This can be updated using a similar syntax to the poetry version tool.
+This can be updated using the `dataset version` command.
 
 `dataset version minor -m "Added a new column"` - will bump to the next minor version with the associated comment. 
 

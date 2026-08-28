@@ -22,11 +22,26 @@ render_to_html()
 
 ## Updating common dependencies
 
-While working in a repo, if you want to update the common dependencies in the data_common repo.
+Dependencies for the shared package live in `pyproject.toml`. The base package is deliberately small; install the feature extras needed by the repository.
 
+```bash
+# The normal data-publication environment
+uv sync --extra dataset
+
+# Work on every data_common feature
+uv sync --all-extras
 ```
-cd src/data_common
-poetry add [package] # add package to data_common repo
-cd ../..
-poetry update # update the lock file for the current repo
-```
+
+The available extras are:
+
+- `dataset` — the standard dataset build, validation and publication workflow
+- `notebook` — lightweight notebook helpers
+- `render` — notebook-to-Markdown/HTML/DOCX rendering
+- `google` — Google Drive and Docs publication
+- `charts` — Altair chart creation and rendering
+- `analysis` — plotting, clustering and scientific-analysis helpers
+- `geo` — GeoPandas and parquet helpers
+- `db` — standalone DuckDB helpers
+- `validation` — Pydantic URL helpers
+
+The `dev` dependency group supplies Ruff, Pyright and type stubs. uv installs it by default.
