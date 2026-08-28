@@ -151,7 +151,7 @@ class DataResource:
             return "No resource file", "red"
         if desc_error := self.validate_descriptions():
             return desc_error, "red"
-        valid_check = validate(self.resource_path)
+        valid_check = validate(self.resource_path).to_dict()
         if valid_check["stats"]["errors"] > 0:
             return valid_check["tasks"][0]["errors"], "red"
         return "Valid resource", "green"
@@ -213,7 +213,7 @@ class DataResource:
         Recreate yaml file from source file, preserving any custom values from previously existing yaml file
         """
         existing_desc = self.get_resource()
-        desc = describe(self.path)
+        desc = describe(self.path).to_dict()
         desc.update(existing_desc)
 
         desc["schema"] = self.get_schema_from_file(existing_desc.get("schema", None))
@@ -231,7 +231,7 @@ class DataResource:
         # ensure a blank title and description
         new_dict = {"title": None, "description": None, "custom": {}}
 
-        new_dict.update(desc.to_dict())
+        new_dict.update(desc)
 
         resource_path = self.path
         # resource must be csv
@@ -908,7 +908,7 @@ class DataPackage:
             warnings.filterwarnings("ignore")
             valid_results = validate(
                 self.build_path() / "datapackage.json", type="package"
-            )
+            ).to_dict()
         if valid_results["stats"]["errors"] > 0:
             raise ValueError(valid_results)
 

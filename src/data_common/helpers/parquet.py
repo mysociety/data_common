@@ -29,7 +29,7 @@ def write_split_parquet(
     else:
         for file in output_path.iterdir():
             file.unlink()
-    table = pa.parquet.read_table(from_file)
+    table = pq.read_table(from_file)
 
     # Calculate the total number of records
     total_records = table.num_rows
