@@ -414,15 +414,23 @@ class DataPackage:
             return MINOR, f"New resource(s) added: {new_resources}"
 
         # Add/remove new data to an existing data resource
-        # get a list of all resources where the row count has changed
         old_row_counts = {
             x["name"]: x["custom"]["row_count"] for x in previous_data["resources"]
         }
         new_row_counts = {
             x["name"]: x["custom"]["row_count"] for x in current_data["resources"]
         }
+        old_hash_values = {x["name"]: x["hash"] for x in previous_data["resources"]}
+        new_hash_values = {x["name"]: x["hash"] for x in current_data["resources"]}
+        different_hash_values = [
+            name
+            for name, old_hash in old_hash_values.items()
+            if old_hash != new_hash_values[name]
+        ]
         different_counts = [
-            x for x in old_row_counts if old_row_counts[x] != new_row_counts[x]
+            name
+            for name, old_count in old_row_counts.items()
+            if old_count != new_row_counts[name] and name in different_hash_values
         ]
         if len(different_counts) > 0:
             different_counts = ",".join(different_counts)
@@ -440,11 +448,6 @@ class DataPackage:
         # check for any patch level differences
 
         # Correct errors in existing data - no new rows or data, but a hash change
-        old_hash_values = {x["name"]: x["hash"] for x in previous_data["resources"]}
-        new_hash_values = {x["name"]: x["hash"] for x in current_data["resources"]}
-        different_hash_values = [
-            x for x in old_hash_values if old_hash_values[x] != new_hash_values[x]
-        ]
         if len(different_hash_values) > 0:
             different_hash_values = ",".join(different_hash_values)
             return (
@@ -503,6 +506,12 @@ class DataPackage:
                             PATCH,
                             f"{current_resource['name']}: {variable} changed from {p_variable} to {c_variable}",
                         )
+
+        # Row counts are derived metadata. They have already been compared alongside
+        # the content hashes above, so differences in counting conventions are not a
+        # dataset change by themselves.
+        for resource in current_data["resources"] + previous_data["resources"]:
+            resource["custom"].pop("row_count", None)
 
         if current_data != previous_data:
             dict_diff = diff_dicts(previous_data, current_data)

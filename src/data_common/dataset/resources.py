@@ -186,11 +186,16 @@ class DataResource:
         Rebuild resource YAML while preserving existing custom values.
         """
         existing_description = self.get_resource()
-        description = describe(self.path).to_dict()
-        description.update(existing_description)
-        description["schema"] = self.get_schema_from_file(
-            existing_description.get("schema")
-        )
+        current_hash = hashlib.md5(
+            self.path.read_bytes(),
+            usedforsecurity=False,
+        ).hexdigest()
+        description = existing_description or describe(self.path).to_dict()
+        existing_schema = existing_description.get("schema")
+        if existing_description.get("hash") == current_hash and existing_schema:
+            description["schema"] = existing_schema
+        else:
+            description["schema"] = self.get_schema_from_file(existing_schema)
         description["path"] = self.path.name
 
         if is_geodata:
@@ -209,10 +214,7 @@ class DataResource:
             file_path=self.path,
         ).int()
         resource["custom"]["row_count"] = rows
-        resource["hash"] = hashlib.md5(
-            self.path.read_bytes(),
-            usedforsecurity=False,
-        ).hexdigest()
+        resource["hash"] = current_hash
 
         yaml = YAML()
         yaml.default_flow_style = False
