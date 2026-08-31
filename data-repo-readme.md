@@ -38,13 +38,17 @@ This currently contains two templates.
 - `.devcontainer` - The setup instructions for VS Code and Codespaces to work with the relevant Dockerfile. Includes expected exemptions.
 - `.vscode` - Default code processing settings for VS Code.
 - `data` - data storage. Has some subfolders to help with common sorting. Files put in `data\private` will not be committed.
-- `docs` - Jekyll directory that maps to the GitHub pages site for this repo.
+- `data/packages/_published` - generated, versioned publication data.
+- `_site` - ignored static Pages artefact created by the shared Flask app.
 - `notebooks` - store any Jupyter notebooks here. 
 - `script` - script-to`rule`them`all directory.
 - `src/data_common` - submodule for the `data_common` repo that contains common tools and helper libraries.
 - `src/[repo_name]` - where you should put specific python scripts for this repository. 
 - `tests` - directory for pytest tests. 
 - `Dockerfile` - The Dockerfile for this repo. Is locked to the `data_common` image at the latest commit when the repo was upgraded. This can be updated if you make changes that require a new docker setup. 
+
+Existing Jekyll repositories can preview their conversion with `dataset site migrate` and apply it with `dataset site migrate --apply`. The command moves `docs/data` to `data/packages/_published/data`, imports site settings into `pyproject.toml`, converts known workflows and notebook upload targets, and removes the recognised legacy `docs` tree. It refuses unexpected `docs` content. Add `--ignore-published` for repositories that produce publication data only in CI; omit it when versioned outputs are committed.
+
 
 # Code formatting and conventions
 
@@ -67,7 +71,7 @@ The problem this is solving is automated testing and release of datasets that ar
 
 One repo can contain multiple data packages. A data package can contain multiple 'resources' (tables).
 
-A published data package will use Jekyll and GitHub Pages to render help and download links for different versions. This includes a rendered Excel file containing all resources and metadata associated with a dataset. Access to these through the Jekyll site can include a 'soft' email gate (where users are prompted to share information), and a hard email gate, where users must complete a survey before getting access to the datasets. 
+A published data package uses the shared Flask application to render help and download links, then freezes those views for GitHub Pages. This includes a rendered Excel file containing all resources and metadata associated with a dataset. Access can include a soft or hard survey gate.
 
 ## Helper tool
 
@@ -171,7 +175,7 @@ Versions of these are stored in `.github/workflow-templates`.
 
 #### Publish
 
-The publishing process builds from the versioned datapackage and assembles the Jekyll help pages and composite files (excel, json, sqlite) for the overall datapackage. 
+The publishing process builds versioned datapackages and composite files (Excel, JSON, and SQLite). Run `dataset site build` separately to create the complete static site.
 
 This can be run with `dataset publish`, or a `--publish` flag can be added to `dataset version` (only run if a version update is successful).
 
@@ -226,7 +230,7 @@ A notebook can be rendered and published using the `notebook` tool. Run `noteboo
 
 These steps can be comabined  with `notebook render --publish`.
 
-The publish options avalible are `gdrive`, `jekyll`, and `readme`. 
+The publish options available are `gdrive`, `site`, and `readme`.
 
 Google drive will (with correct env permissions - see the passwords page on the wiki) upload the rendered document.
 
@@ -241,7 +245,7 @@ upload:
 
 You can also specify `[blah]_id` for both and use the drive/folder ids in google drive. 
 
-The Jekyll upload will take the markdown file and move it to the jekyll folder in `docs`. This will make it avaliable in public in the github pages site. Any extra parameters are added to the front matter for the file.
+The `site` upload writes a neutral HTML page bundle under `_render/site/analysis`. The Flask site discovers that bundle, lists it on the homepage, and copies page-specific notebook resources into the static artefact.
 
 The readme option will output the final file to `readme.md` in the root of the repo. 
 This takes 'start' and 'end' parameters that give anchor text to inject the content between. If not set, will override entire readme.
