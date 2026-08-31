@@ -1,5 +1,8 @@
+from __future__ import annotations
+
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, TypedDict
+from typing import Any, TypedDict
 
 import numpy as np
 import pandas as pd
@@ -39,7 +42,7 @@ def is_unique(series: pd.Series) -> bool:
 def get_example(series: pd.Series) -> str | int | float:
     try:
         str_series = series.dropna().apply(str)
-        item = sorted(list(str_series))
+        item = sorted(str_series)
     except ValueError:
         item = series
     if len(item) == 0:
@@ -72,7 +75,7 @@ def get_descriptions_from_schema(original_schema: SchemaValidator) -> dict[str, 
 
 
 class EnumPlaceholder:
-    def __init__(self, func: Callable[[pd.Series], list]):
+    def __init__(self, func: Callable[[pd.Series], list]) -> None:
         self.func = func
 
     def process(self, series: pd.Series) -> list:
@@ -118,14 +121,16 @@ class Schema:
     def get_table_schema(
         cls,
         df: pd.DataFrame,
-        descriptions: dict[str, str] = {},
+        descriptions: dict[str, str] | None = None,
         *,
-        enums: Dict[str, EnumPlaceholder | list[Any]] = {},
+        enums: dict[str, EnumPlaceholder | list[Any]] | None = None,
     ) -> SchemaValidator:
         """
         Produce a table data schema for the dataframe
         https://specs.frictionlessdata.io/table-schema/
         """
+        descriptions = descriptions or {}
+        enums = enums or {}
         data: SchemaValidator = build_table_schema(df, index=False, version=False)  # type: ignore
         data["fields"] = [
             cls.enhance_field(df, field, descriptions, enums)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 
 
@@ -46,7 +48,9 @@ def parse_semver(version_string: str) -> None | dict[str, str]:
 
 
 def semver_is_higher(semver1: str, semver2: str) -> bool:
-    """Returns True if semver2 is a higher version than semver1, False otherwise."""
+    """
+    Return whether semver2 is higher than semver1.
+    """
     # parse semvers into dictionaries
     semver1_dict = parse_semver(semver1)
     semver2_dict = parse_semver(semver2)
@@ -61,18 +65,14 @@ def semver_is_higher(semver1: str, semver2: str) -> bool:
         semver2_dict["minor"]
     ) > int(semver1_dict["minor"]):
         return True
-    # compare patch versions
-    if (
+    return (
         int(semver2_dict["major"]) == int(semver1_dict["major"])
         and int(semver2_dict["minor"]) == int(semver1_dict["minor"])
         and int(semver2_dict["patch"]) > int(semver1_dict["patch"])
-    ):
-        return True
-    # otherwise, semver2 is not a higher version
-    return False
+    )
 
 
-def bump_version(semver: str, choice: str):
+def bump_version(semver: str, choice: str) -> str:
     """
     Given a semver string and a choice of major, minor, or patch,
     bumps the semver to the next version and correctly lower more

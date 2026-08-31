@@ -1,35 +1,35 @@
-import hashlib
+from __future__ import annotations
+
 import importlib
-import io
 import json
-import os
 import re
 import shutil
 import sqlite3
 import subprocess
-import sys
 import warnings
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from shutil import copyfile
-from typing import Any, Callable, Literal, TypedDict, TypeVar, cast
+from typing import Any, Literal, NamedTuple, TypeVar
 from urllib.parse import urlencode
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import pytest
 import rich
-from frictionless import describe, validate
+from frictionless import validate
 from rich.table import Table
 from ruamel.yaml import YAML
 
 from data_common.db import duck_query
 
-from .jekyll_management import render_jekyll
+from .package_models import CompositeOptions, DataPackageExtras
+from .publication import publish_version_aliases
+from .resources import DataResource
 from .rich_assist import PanelPrint, df_to_table
 from .settings import get_settings
-from .table_management import SchemaValidator, update_table_schema
+from .testing import run_dataset_tests
 from .version_management import (
     bump_version,
     is_valid_semver,
@@ -38,47 +38,47 @@ from .version_management import (
 )
 
 
-def diff_dicts(a: dict, b: dict, missing=KeyError):
+class ValueDifference(NamedTuple):
     """
-    Return a dictionary of keys and values that are difference
-    between two dictionaries, a and b, which both can contain dictionaries as values.
-
+    Hold previous and current values for one changed key.
     """
-    diff = {}
-    for key in set(a.keys()).union(b.keys()):
-        try:
-            a_value = a[key]
-        except missing:
-            a_value = None
-        try:
-            b_value = b[key]
-        except missing:
-            b_value = None
-        if a_value != b_value:
-            diff[key] = (a_value, b_value)
-    return diff
+
+    previous: Any
+    current: Any
 
 
-version_rules = (
-    Literal["MAJOR"] | Literal["MINOR"] | Literal["PATCH"] | Literal["INITIAL"]
-)
+def diff_dicts(
+    a: Mapping[str, Any],
+    b: Mapping[str, Any],
+) -> dict[str, ValueDifference]:
+    """
+    Return changed values shared by two nested mappings.
+    """
+    differences: dict[str, ValueDifference] = {}
+    for key in set(a).union(b):
+        previous = a.get(key)
+        current = b.get(key)
+        if previous != current:
+            differences[key] = ValueDifference(previous, current)
+    return differences
 
 
-class CompositeOptions(TypedDict):
-    include: list[str]
-    exclude: list[str]
-    modify: dict[str, dict[str, str]]
-    render: str
+version_rules = Literal["MAJOR", "MINOR", "PATCH", "INITIAL"]
 
 
-class ResourceStub(TypedDict):
-    name: str
-    title: str
-    licence: dict[str, str]
+alert_colors = Literal["red", "green", "orange", "blue"]
 
 
-alert_colors = Literal["red"] | Literal["green"] | Literal["orange"] | Literal["blue"]
-ValidationErrors = list[tuple[str, alert_colors]]
+class ValidationErrorItem(NamedTuple):
+    """
+    Pair a validation message with its terminal display colour.
+    """
+
+    message: str
+    colour: alert_colors
+
+
+ValidationErrors = list[ValidationErrorItem]
 
 
 def make_color(item: str, color: alert_colors) -> str:
@@ -90,200 +90,15 @@ def color_print(item: str, color: alert_colors, new_line: bool = True) -> None:
 
 
 @dataclass
-class DataResource:
-    path: Path
-
-    @property
-    def slug(self) -> str:
-        return self.path.stem
-
-    def get_order(self, native_order: int = 999) -> int:
-        """
-        Get a sheet order if one has been set
-        """
-        desc = self.get_resource()
-        old_style = desc.get("_sheet_order", None)
-        if old_style:
-            return old_style
-        return desc.get("custom", {}).get("dataset_order", native_order)
-
-    @property
-    def resource_path(self) -> Path:
-        """
-        Path to a yaml file describing this resource
-        """
-        return self.path.parent / (self.slug + ".resource.yaml")
-
-    @property
-    def has_resource_yaml(self) -> bool:
-        return self.resource_path.exists()
-
-    def validate_descriptions(self) -> str:
-        """
-        Enforce checks on optional title and description parameters
-        """
-        if self.has_resource_yaml is False:
-            return "Missing schema"
-
-        problems: list[tuple[str, str]] = []
-
-        desc = self.get_resource()
-        if not desc["title"]:
-            problems.append(("title", "resource"))
-        if not desc["description"]:
-            problems.append(("description", "resource"))
-
-        for f in desc["schema"]["fields"]:
-            if not f["description"]:
-                problems.append(("description", f["name"]))
-
-        if len(problems) == 0:
-            return ""
-        else:
-            problems_str = [" for ".join(x) for x in problems]
-            return "Missing: " + ", ".join(problems_str)
-
-    def get_status(self) -> tuple[str, alert_colors]:
-        """
-        Check for errors in a resource
-        """
-        if not self.has_resource_yaml:
-            return "No resource file", "red"
-        if desc_error := self.validate_descriptions():
-            return desc_error, "red"
-        valid_check = validate(self.resource_path).to_dict()
-        if valid_check["stats"]["errors"] > 0:
-            return valid_check["tasks"][0]["errors"], "red"
-        return "Valid resource", "green"
-
-    def get_df(self) -> pd.DataFrame:
-        """
-        Get a dataframe of the resource
-        """
-        # if is csv
-        if self.path.suffix == ".csv":
-            return pd.read_csv(self.path)
-        # if parquet
-        elif self.path.suffix == ".parquet":
-            return pd.read_parquet(self.path)
-        else:
-            raise ValueError(f"Unhandled file type {self.path.suffix}")
-
-    def get_resource(
-        self, inline_data: bool = False, is_geodata: bool = False
-    ) -> dict[str, Any]:
-        if self.has_resource_yaml:
-            yaml = YAML(typ="safe")
-            with self.resource_path.open("r") as f:
-                resource = yaml.load(f)
-            if inline_data:
-                df = self.get_df()
-                if is_geodata and "geometry" in df.columns:
-                    df = df.drop(columns=["geometry"])
-                resource["data"] = df.fillna(value="").to_dict(orient="records")
-                resource["format"] = "json"
-                del resource["scheme"]
-                del resource["path"]
-            return resource
-
-        return {}
-
-    def get_metadata_df(self) -> pd.DataFrame:
-        if self.has_resource_yaml is False:
-            raise ValueError("Trying to get metadata for {self.slug}, but not present.")
-        resource = self.get_resource()
-        df = pd.DataFrame(resource["schema"]["fields"])
-        df["unique"] = df["constraints"].apply(
-            lambda x: "Yes" if x.get("unique", False) else "No"
-        )
-        df["options"] = df["constraints"].apply(
-            lambda x: ", ".join([str(x) for x in x.get("enum", [])])
-        )
-        df = df.drop(columns=["constraints"]).rename(columns={"name": "column"})
-        df = df[["column", "description", "type", "example", "unique", "options"]]
-        return df
-
-    def get_schema_from_file(
-        self, existing_schema: SchemaValidator | None
-    ) -> SchemaValidator:
-        return update_table_schema(self.path, existing_schema)
-
-    def rebuild_yaml(self, is_geodata: bool = False):
-        """
-        Recreate yaml file from source file, preserving any custom values from previously existing yaml file
-        """
-        existing_desc = self.get_resource()
-        desc = describe(self.path).to_dict()
-        desc.update(existing_desc)
-
-        desc["schema"] = self.get_schema_from_file(existing_desc.get("schema", None))
-        desc["path"] = self.path.name
-
-        # if geodata - drop geometry example from schema
-        if is_geodata:
-            new_fields = []
-            for f in desc["schema"]["fields"]:
-                if f["name"] == "geometry":
-                    f["example"] = ""
-                new_fields.append(f)
-            desc["schema"]["fields"] = new_fields
-
-        # ensure a blank title and description
-        new_dict = {"title": None, "description": None, "custom": {}}
-
-        new_dict.update(desc)
-
-        resource_path = self.path
-        # resource must be csv
-        if resource_path.suffix not in [".csv", ".parquet"]:
-            raise ValueError(
-                "Resource must be csv or paraquet, update this function if extending past that."
-            )
-
-        # get number of rows in resource
-
-        rows = duck_query(
-            "SELECT COUNT(*) FROM {{ file_path }}", file_path=resource_path
-        ).int()
-
-        # update number of rows in resource (custom)
-        new_dict["custom"]["row_count"] = rows
-
-        # get md5 hash of resource
-        with open(resource_path, "rb") as f:
-            md5 = hashlib.md5(f.read()).hexdigest()
-        new_dict["hash"] = md5
-
-        yaml = YAML()
-        yaml.default_flow_style = False
-
-        # dump yaml to a textio stream
-        with io.StringIO() as f:
-            yaml.dump(new_dict, f)
-            yaml_str = f.getvalue()
-
-        # horrible little patch to always put a quote around No
-        yaml_str = yaml_str.replace(": No\n", ": 'No'\n")
-        yaml_str = yaml_str.replace(": Yes\n", ": 'Yes'\n")
-
-        # and in enums
-        yaml_str = yaml_str.replace("- No\n", "- 'No'\n")
-        yaml_str = yaml_str.replace("- Yes\n", "- 'Yes'\n")
-        yaml_str = yaml_str.replace("- no\n", "- 'no'\n")
-        yaml_str = yaml_str.replace("- yes\n", "- 'yes'\n")
-
-        # times get formatted incorrect as numbers, we want to add quotes around them
-        # e.g. 'example: 21:30' should become 'example: "21:30"'
-        yaml_str = re.sub(r"example: (\d{2}:\d{2})", r'example: "\1"', yaml_str)
-
-        with self.resource_path.open("w") as f:
-            f.write(yaml_str)
-        print(f"Updated config for {self.slug} to {self.resource_path}")
-
-
-@dataclass
 class DataPackage:
     path: Path
+
+    @property
+    def extras(self) -> DataPackageExtras:
+        """
+        Return typed application metadata from the datapackage custom field.
+        """
+        return DataPackageExtras.from_datapackage(self.get_datapackage())
 
     @property
     def slug(self) -> str:
@@ -301,55 +116,51 @@ class DataPackage:
 
     def test_package(self, quiet: bool = False) -> bool:
         """
-        Check the tests directory for a pytest file named 'test_{package.slug}.py'
-        If this exists, run it, if not, return None.
-        if tests pass, return True, if not, return False.
+        Run the tests configured for this package in an isolated process.
 
-        Can specify multiple test filenames as "custom": "tests": ["test_1", "test_2"]
-        in the datapackage yml.
-
+        A package can list test filenames without extensions in custom.tests.
+        If it does not, test_<package slug>.py is used when present.
+        Explicitly configured missing tests fail the package.
         """
-        old_stdout = None
         test_dir = self.path.parent.parent.parent / "tests"
-        desc = self.get_datapackage()
-        tests = desc["custom"].get("tests", [])
-        tests = [x + ".py" for x in tests]
-        if tests == []:
-            if (test_dir / f"test_{self.slug}.py").exists():
-                tests.append(f"test_{self.slug}.py")
-        paths = [test_dir / x for x in tests]
-        if quiet is False:
-            rich.print("[blue]Running tests[/blue]")
-        elif quiet is True:
-            old_stdout = sys.stdout
-            sys.stdout = open(os.devnull, "w")
-        results = [
-            pytest.main(["--quiet"] + [str(test_path)])
-            for test_path in paths
-            if test_path.exists()
-        ]
-        if quiet is True:
-            sys.stdout = old_stdout
-        if results:
-            return max(results) == 0
+        configured_names = tuple(self.extras.tests)
+        if configured_names:
+            paths = tuple(test_dir / f"{name}.py" for name in configured_names)
+            missing = tuple(path for path in paths if not path.is_file())
+            if missing:
+                rich.print(
+                    "[red]Configured dataset tests do not exist: "
+                    + ", ".join(str(path) for path in missing)
+                    + "[/red]"
+                )
+                return False
         else:
-            rich.print(
-                "[red]A test path is configured, but the file does not exist[/red]"
-            )
-            return True  # Ok with this, with the warning
+            default_path = test_dir / f"test_{self.slug}.py"
+            if not default_path.is_file():
+                if not quiet:
+                    rich.print("[yellow]No dataset-specific tests configured[/yellow]")
+                return True
+            paths = (default_path,)
 
-    def build_from_function(self):
+        if not quiet:
+            rich.print("[blue]Running tests[/blue]")
+        result = run_dataset_tests(
+            paths,
+            repo_root=test_dir.parent,
+            quiet=quiet,
+        )
+        return result.passed
+
+    def build_from_function(self) -> None:
         """
         Function to build data from a function specified in a module.
         """
-        desc = self.get_datapackage()
-        build_module = desc.get("custom", {}).get("build", "")
-        build_module = build_module.strip() if build_module else ""
+        build_module = self.extras.build.strip()
         if not build_module:
             rich.print(
                 "[red]No build command or python path specified in custom.build in the yaml[/red]"
             )
-            return None
+            return
         if ":" in build_module and " " not in build_module:
             module, function = build_module.split(":")
             module = importlib.import_module(module)
@@ -382,9 +193,9 @@ class DataPackage:
         bump_rule: str,
         update_message: str,
         dry_run: bool = False,
-        auto_ban: list[str] = [],
+        auto_ban: list[str] | None = None,
         publish: bool = False,
-    ):
+    ) -> None:
         """
         Bumps the version number of the datapackage according to the
         specified bump rule.
@@ -404,6 +215,7 @@ class DataPackage:
             raise ValueError(f"{bump_rule} is not a valid bump_rule")
         current_version = self.get_current_version()
         force_static = bump_rule == "STATIC"
+        auto_ban = auto_ban or []
         if bump_rule in ["AUTO", "STATIC"]:
             bump_results = self.derive_bump_rule_from_change()
             if bump_results:
@@ -416,7 +228,7 @@ class DataPackage:
                     update_message = auto_update_message
             else:
                 rich.print("[red]No changes detected, not bumping[/red]")
-                return None
+                return
         if bump_rule == "INITIAL":
             new_version = current_version
         elif force_static:
@@ -433,7 +245,7 @@ class DataPackage:
             self.rebuild_all_resources()
             self.build_package()
             self.build_missing_previous_versions()
-            render_jekyll()
+            publish_version_aliases()
 
     def previous_versions(self) -> list[str]:
         """
@@ -661,11 +473,11 @@ class DataPackage:
         resource_level_description_variables = ["title", "description", "keywords"]
         field_schema_level_description_variables = ["description", "example"]
         for previous_resource in previous_data["resources"]:
-            current_resource = [
-                x
-                for x in current_data["resources"]
-                if x["name"] == previous_resource["name"]
-            ][0]
+            current_resource = next(
+                item
+                for item in current_data["resources"]
+                if item["name"] == previous_resource["name"]
+            )
             for variable in resource_level_description_variables:
                 if (p_variable := previous_resource.get(variable)) != (
                     c_variable := current_resource.get(variable)
@@ -679,11 +491,11 @@ class DataPackage:
             current_schema_fields = current_resource["schema"]["fields"]
             for variable in field_schema_level_description_variables:
                 for previous_field in previous_schema_fields:
-                    current_field = [
-                        x
-                        for x in current_schema_fields
-                        if x["name"] == previous_field["name"]
-                    ][0]
+                    current_field = next(
+                        item
+                        for item in current_schema_fields
+                        if item["name"] == previous_field["name"]
+                    )
                     if (p_variable := previous_field.get(variable)) != (
                         c_variable := current_field.get(variable)
                     ):
@@ -708,7 +520,7 @@ class DataPackage:
         dry_run: bool = False,
         publish: bool = False,
         prerelease: str = "",
-    ):
+    ) -> None:
         version = self.get_current_version()
         current_version_is_prerelease = "-" in version
         if current_version_is_prerelease:
@@ -732,28 +544,33 @@ class DataPackage:
                 raise ValueError("Package is not valid, cannot update version.")
 
             # increment the version in the yaml and update change log
-            custom = desc["custom"]
-            change_log = custom.get("change_log", {})
-            change_log[new_semver] = update_message
-            custom["change_log"] = change_log
+            extras = DataPackageExtras.from_datapackage(desc).with_change(
+                new_semver,
+                update_message,
+            )
             if dry_run:
                 rich.print("[yellow]Dry run, not updating.[/yellow]")
                 rich.print(
                     f"[blue]Would update to version {new_semver} because of {update_message}[/blue]"
                 )
             else:
-                self.update_yaml({"version": new_semver, "custom": custom})
+                self.update_yaml(
+                    {
+                        "version": new_semver,
+                        "custom": extras.as_datapackage_value(),
+                    }
+                )
                 self.store_version()
                 rich.print(f"{self.slug} version bumped to [green]{new_semver}[/green]")
                 if publish:
                     self.rebuild_all_resources()
                     self.build_package()
                     self.build_missing_previous_versions()
-                    render_jekyll()
+                    publish_version_aliases()
         else:
             print(f"{new_semver} is not higher than {version} or is 0.1.0.")
 
-    def store_version(self):
+    def store_version(self) -> None:
         """
         store all files in the top level directory of the package in a folder for this version.
         """
@@ -765,7 +582,7 @@ class DataPackage:
             if file.is_dir() is False:
                 shutil.copy(file, version_dir / file.name)
 
-    def update_yaml(self, new_values: dict[str, Any]):
+    def update_yaml(self, new_values: dict[str, Any]) -> None:
         """
         Rebuild the yaml file with the new values
         """
@@ -779,12 +596,12 @@ class DataPackage:
     def build_path(self, version: str = "") -> Path:
         if version == "":
             version = self.get_current_version()
-        build_path = get_settings()["publish_dir"] / "data" / self.slug / version
+        build_path = get_settings().publish_dir / "data" / self.slug / version
         if build_path.exists() is False:
             build_path.mkdir(parents=True, exist_ok=True)
         return build_path
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.datapackage_path.exists() is False:
             raise ValueError(f"No datapackage.yaml found in {self.path}")
 
@@ -794,7 +611,7 @@ class DataPackage:
         resources += [DataResource(path=x) for x in self.path.glob("*.parquet")]
 
         # check there aren't any csvs and paraquets with the same name
-        if len(set([x.path.stem for x in resources])) != len(resources):
+        if len({resource.path.stem for resource in resources}) != len(resources):
             raise ValueError(
                 f"Found multiple resources with the same name in {self.path}"
             )
@@ -811,7 +628,7 @@ class DataPackage:
     @property
     def url(self) -> str:
         url = (
-            get_settings()["publish_url"]
+            get_settings().publish_url
             + "datasets/"
             + self.slug.replace("-", "_")
             + "/"
@@ -821,18 +638,17 @@ class DataPackage:
             url = url.replace("/datasets/datasets/", "/datasets/")
         return url
 
-    def rebuild_resource(self, slug: str):
+    def rebuild_resource(self, slug: str) -> None:
         resource = self.resources()[slug]
         resource.rebuild_yaml()
 
-    def rebuild_all_resources(self):
+    def rebuild_all_resources(self) -> None:
         is_geodata = self.is_geodata()
         for resource in self.resources().values():
             resource.rebuild_yaml(is_geodata=is_geodata)
 
     def is_geodata(self) -> bool:
-        desc = self.get_datapackage()
-        return desc["custom"].get("is_geodata", False)
+        return self.extras.is_geodata
 
     def get_datapackage(self) -> dict[str, Any]:
         yaml = YAML(typ="safe")
@@ -843,19 +659,27 @@ class DataPackage:
         desc = self.get_datapackage()
         validation_errors: ValidationErrors = []
         if not desc.get("description", ""):
-            validation_errors.append(("Missing package description", "red"))
+            validation_errors.append(
+                ValidationErrorItem("Missing package description", "red")
+            )
         if not desc.get("title", ""):
-            validation_errors.append(("Missing package title", "red"))
+            validation_errors.append(
+                ValidationErrorItem("Missing package title", "red")
+            )
         if not desc.get("licenses", ""):
-            validation_errors.append(("Missing package licence", "red"))
+            validation_errors.append(
+                ValidationErrorItem("Missing package licence", "red")
+            )
         if self.test_package(quiet) is False:
-            validation_errors.append(("Tests failed", "red"))
+            validation_errors.append(ValidationErrorItem("Tests failed", "red"))
         for r in self.resources().values():
             if r.get_status()[1] == "red":
-                validation_errors.append((f"Invalid resource {r.slug}", "red"))
+                validation_errors.append(
+                    ValidationErrorItem(f"Invalid resource {r.slug}", "red")
+                )
         return validation_errors
 
-    def past_versions(self):
+    def past_versions(self) -> list[str]:
         """
         get a list of previous versions as avaliable in the versions folder
         """
@@ -865,10 +689,10 @@ class DataPackage:
                 versions.append(version.name)
         return versions
 
-    def build_missing_previous_versions(self):
+    def build_missing_previous_versions(self) -> None:
         """
-        Where there are previous versions in data/packages but not rendered to
-        docs/data/packages, build them.
+        Where source versions exist but their publication output is missing,
+        build them.
         """
 
         for v in self.past_versions():
@@ -878,9 +702,9 @@ class DataPackage:
                 previous = self.__class__(self.path / "versions" / v)
                 previous.build_package()
 
-    def build_package(self):
+    def build_package(self) -> None:
         """
-        Build package files and move to jekyll directory
+        Build package files and move them to the publication data directory.
         """
 
         color_print(
@@ -899,7 +723,7 @@ class DataPackage:
         self.build_composites()
         color_print("✔️", "green")
 
-    def check_build_integrity(self):
+    def check_build_integrity(self) -> None:
         """
         run the validator against the data pacakge
         """
@@ -912,18 +736,14 @@ class DataPackage:
         if valid_results["stats"]["errors"] > 0:
             raise ValueError(valid_results)
 
-    def copy_resources(self):
+    def copy_resources(self) -> None:
         """
         Copy the CSV/parquet over and create the opposite item.
         Use DUCKDB to make the conversion robust for larger files.
         """
 
-        desc = self.get_datapackage()
-        formats = desc.get("custom", {}).get("formats", {})
-        csv_value = formats.get("csv", True)
-        parquet_value = formats.get("parquet", True)
-        geojson_value = formats.get("geojson", False)
-        geopackage_value = formats.get("gpkg", False)
+        extras = self.extras
+        formats = extras.formats
 
         csv_copy_query = """
         copy (select * from {{ source }}) to {{ dest }} (format PARQUET);
@@ -932,7 +752,7 @@ class DataPackage:
         # __index_level_0__ is an internal parquet column that duckdb has access to
         # but we don't want to export
         exclude = ""
-        if desc["custom"].get("is_geodata", False):
+        if extras.is_geodata:
             exclude = "EXCLUDE (geometry)"
 
         parquet_copy_query = """
@@ -942,19 +762,19 @@ class DataPackage:
         for r in self.resources().values():
             # need to have seperate handling for csv and paraquet
             if r.path.suffix == ".csv":
-                if csv_value:
+                if formats.csv:
                     copyfile(r.path, self.build_path() / r.path.name)
-                if parquet_value:
+                if formats.parquet:
                     parquet_file = self.build_path() / (r.path.stem + ".parquet")
                     duck_query(csv_copy_query, source=r.path, dest=parquet_file).run()
-                if geojson_value or geopackage_value:
+                if formats.geojson or formats.gpkg:
                     raise ValueError(
                         "Writing to geojson/geopackage from csv source not supported. Use parquet internally."
                     )
             elif r.path.suffix == ".parquet":
-                if parquet_value:
+                if formats.parquet:
                     copyfile(r.path, self.build_path() / r.path.name)
-                if csv_value:
+                if formats.csv:
                     csv_file = self.build_path() / (r.path.stem + ".csv")
                     duck_query(
                         parquet_copy_query,
@@ -962,11 +782,11 @@ class DataPackage:
                         source=r.path,
                         dest=csv_file,
                     ).run()
-                if geojson_value:
+                if formats.geojson:
                     geojson_path = self.build_path() / (r.path.stem + ".geojson")
                     gdf = gpd.read_parquet(r.path)
                     gdf.to_file(geojson_path, driver="GeoJSON")
-                if geopackage_value:
+                if formats.gpkg:
                     geopackage_path = self.build_path() / (r.path.stem + ".gpkg")
                     gdf = gpd.read_parquet(r.path)
                     gdf.to_file(geopackage_path, driver="GPKG")
@@ -975,12 +795,7 @@ class DataPackage:
         """
         Get any priority order between the datasets
         """
-        datapackage = self.get_datapackage()
-        if "custom" not in datapackage:
-            datapackage["custom"] = {}
-            if "dataset_order" not in datapackage["custom"]:
-                datapackage["custom"]["dataset_order"] = 999
-        return datapackage["custom"]["dataset_order"]
+        return self.extras.dataset_order
 
     def get_current_datapackage_json(self) -> dict[str, Any]:
         """
@@ -998,18 +813,13 @@ class DataPackage:
                 resource["custom"]["datasette"]["about_url"] = (
                     f"{self.url}#{resource['name']}"
                 )
-        if "custom" not in datapackage:
-            datapackage["custom"] = {}
-        if "dataset_order" not in datapackage["custom"]:
-            datapackage["custom"]["dataset_order"] = 999
-        if "datasette" not in ["custom"]:
-            datapackage["custom"]["datasette"] = {}
-            if "about" not in datapackage["custom"]["datasette"]:
-                datapackage["custom"]["datasette"]["about"] = "Info & Downloads"
-                datapackage["custom"]["datasette"]["about_url"] = self.url
+        extras = DataPackageExtras.from_datapackage(datapackage).for_publication(
+            self.url
+        )
+        datapackage["custom"] = extras.as_datapackage_value()
         return datapackage
 
-    def build_json(self):
+    def build_json(self) -> None:
         """
         Create full json datapackage file for all resources
         """
@@ -1022,12 +832,9 @@ class DataPackage:
         link to the info gathering custom survey relevant for this survey
         Either constructs from the pyproject default, or
         """
-        desc = self.get_datapackage()
         settings = get_settings()
-        default_survey_url = settings["credit_url"]
-        specific_alchemer: str | None = (
-            desc.get("custom", {}).get("download_options", {}).get("survey", None)
-        )
+        default_survey_url = settings.credit_url
+        specific_alchemer = self.extras.download_options.survey
         if specific_alchemer and specific_alchemer != "default":
             survey_url = "https://survey.alchemer.com/s3/" + specific_alchemer
         else:
@@ -1123,60 +930,33 @@ class DataPackage:
             row,
             2,
             self.survey_url(),
-            string=settings["credit_text"],
+            string=settings.credit_text,
         )
 
         return writer
 
     def get_composite_options(
-        self, composite_type: Literal["xlsx"] | Literal["sqlite"] | Literal["json"]
+        self,
+        composite_type: Literal["xlsx", "sqlite", "json"],
     ) -> CompositeOptions:
         """
-        Return the composite inclusion/exclusion options for a specific composite type
-        This allows certain resources to be excluded from certain composites.
+        Resolve composite inclusion, exclusion, modification, and render options.
         """
+        configuration = self.extras.composite.for_format(composite_type)
+        return configuration.resolve(self.resources())
 
-        desc = self.get_datapackage()
-
-        default_options = {
-            "include": "all",
-            "exclude": "None",
-            "modify": {},
-            "render": True,
-        }
-
-        update = (
-            desc.get("custom", {})
-            .get("composite", {})
-            .get(composite_type, default_options)
-        )
-
-        composite_options = default_options
-        composite_options.update(update)
-
-        if composite_options["include"] == "all":
-            composite_options["include"] = list(self.resources().keys())
-        if composite_options["exclude"] == "none":
-            composite_options["exclude"] = []
-
-        composite_options = cast(CompositeOptions, composite_options)
-
-        return composite_options
-
-    def build_excel(self, is_geodata: bool = False):
+    def build_excel(self, is_geodata: bool = False) -> None:
         """
         Build a single excel file for all resources
         """
 
         composite_options = self.get_composite_options("xlsx")
-        if composite_options["render"] is False:
+        if composite_options.render is False:
             rich.print("[red]Skipping Excel build[/red]")
-            return None
+            return
 
         allowed_resource_slugs = [
-            x
-            for x in composite_options["include"]
-            if x not in composite_options["exclude"]
+            x for x in composite_options.include if x not in composite_options.exclude
         ]
 
         sheets: dict[str, pd.DataFrame] = {}
@@ -1226,7 +1006,7 @@ class DataPackage:
 
         writer.close()
 
-    def build_sqlite(self, is_geodata: bool = False):
+    def build_sqlite(self, is_geodata: bool = False) -> None:
         """
         Create a composite sqlite file for all resources
         with metadata as a seperate table.
@@ -1236,14 +1016,12 @@ class DataPackage:
         metadata: list[pd.DataFrame] = []
 
         composite_options = self.get_composite_options("sqlite")
-        if composite_options["render"] is False:
+        if composite_options.render is False:
             rich.print("[red]Skipping sqlite build[/red]")
-            return None
+            return
 
         allowed_resource_slugs = [
-            x
-            for x in composite_options["include"]
-            if x not in composite_options["exclude"]
+            x for x in composite_options.include if x not in composite_options.exclude
         ]
 
         for slug, resource in self.resources().items():
@@ -1268,7 +1046,7 @@ class DataPackage:
             df.to_sql(name, con, index=False)
         con.close()
 
-    def build_composite_json(self, is_geodata: bool = False):
+    def build_composite_json(self, is_geodata: bool = False) -> None:
         """
         This builds a composite json file that inlines the data as json.
         It can have less resources than the total, and some modifiers on the data.
@@ -1276,14 +1054,12 @@ class DataPackage:
 
         datapackage = self.get_datapackage()
         composite_options = self.get_composite_options("json")
-        if composite_options["render"] is False:
+        if composite_options.render is False:
             rich.print("[red]Skipping json build[/red]")
-            return None
+            return
 
         allowed_resource_slugs = [
-            x
-            for x in composite_options["include"]
-            if x not in composite_options["exclude"]
+            x for x in composite_options.include if x not in composite_options.exclude
         ]
 
         datapackage["resources"] = [
@@ -1294,8 +1070,14 @@ class DataPackage:
 
         del datapackage["custom"]
 
-        def modify_item_in_row(row: dict, column: str, operation: Callable[[Any], Any]):
-            """Modify a row in a json array"""
+        def modify_item_in_row(
+            row: dict[str, Any],
+            column: str,
+            operation: Callable[[Any], Any],
+        ) -> dict[str, Any]:
+            """
+            Modify one row in a JSON array.
+            """
             if column in row:
                 row[column] = operation(row[column])
             return row
@@ -1310,7 +1092,7 @@ class DataPackage:
 
         # update json with any modifications
         # for instance splitting comma seperated fields to arrays
-        for resource_slug, modify_maps in composite_options["modify"].items():
+        for resource_slug, modify_maps in composite_options.modify.items():
             for column, modify_type in modify_maps.items():
                 # split specified columns to arrays and update the schema
                 if modify_type == "comma-to-array":
@@ -1339,14 +1121,15 @@ class DataPackage:
                 else:
                     raise ValueError(f"Unrecognised modify type {modify_type}")
 
-        def custom_converter(o):
-            if isinstance(o, np.ndarray):
-                return list(o)
+        def custom_converter(value: object) -> list[Any] | None:
+            if isinstance(value, np.ndarray):
+                return list(value)
+            return None
 
         with open(self.build_path() / f"{self.slug}.json", "w") as f:
             json.dump(datapackage, f, indent=4, default=custom_converter)
 
-    def build_composites(self):
+    def build_composites(self) -> None:
         """
         Create composite files for the datapackage
         """
@@ -1355,13 +1138,12 @@ class DataPackage:
         self.build_sqlite(is_geodata)
         self.build_composite_json(is_geodata)
 
-    def build_markdown(self):
+    def build_markdown(self) -> None:
         """
         Create composite files for the datapackage
         """
-        ...
 
-    def print_status(self):
+    def print_status(self) -> None:
         resources = list(self.resources().values())
 
         df = pd.DataFrame(
