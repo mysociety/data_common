@@ -1,0 +1,30 @@
+{
+  "name": "people",
+  "title": "People",
+  "description": "A small dataset of people.",
+  "version": "1.0.0",
+  "licenses": [{"name": "CC-BY-4.0", "title": "Creative Commons Attribution 4.0"}],
+  "contributors": [],
+  "sources": [],
+  "custom": {
+    "dataset_order": 1,
+    "formats": {"csv": true, "parquet": false},
+    "composite": {
+      "xlsx": {"render": true},
+      "json": {"render": true},
+      "sqlite": {"render": true}
+    },
+    "change_log": {"1.0.0": "Initial model release"}
+  },
+  "resources": [{
+    "name": "people",
+    "title": "People",
+    "description": "People included in the model dataset.",
+    "path": "people.csv",
+    "schema": {"fields": [
+      {"name": "id", "type": "integer", "description": "Stable person identifier."},
+      {"name": "name", "type": "string", "description": "Display name."},
+      {"name": "active", "type": "boolean", "description": "Whether the person is active."}
+    ]}
+  }]
+}

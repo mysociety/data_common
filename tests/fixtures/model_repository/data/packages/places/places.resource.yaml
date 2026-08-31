@@ -1,0 +1,14 @@
+name: places
+title: Places
+description: Places included in the model dataset.
+schema:
+  fields:
+    - name: code
+      type: string
+      description: Short place code.
+      constraints:
+        required: true
+        unique: true
+    - name: name
+      type: string
+      description: Place name.

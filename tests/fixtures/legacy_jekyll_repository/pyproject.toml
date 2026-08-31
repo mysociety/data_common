@@ -1,0 +1,7 @@
+[project]
+name = "legacy-data"
+
+[tool.dataset]
+dataset_dir = "data/packages"
+publish_dir = "docs"
+publish_url = "https://pages.example.test/legacy/datasets/"

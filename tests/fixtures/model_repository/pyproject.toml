@@ -1,0 +1,20 @@
+[project]
+name = "model-data"
+description = "A model repository used by data-common tests"
+
+[tool.dataset]
+dataset_dir = "data/packages"
+publish_dir = "data/packages/_published"
+publish_url = "https://pages.example.test/model/datasets/"
+
+[tool.dataset.site]
+title = "Model data"
+description = "Small datasets used to exercise data-common"
+intro = "Browse **model data**."
+base_url = "/model"
+canonical_url = "https://pages.example.test/model"
+source_url = "https://github.com/example/model-data"
+output_dir = "_site"
+
+[tool.dataset.site.analysis]
+bundle_dir = "_render/site/analysis"

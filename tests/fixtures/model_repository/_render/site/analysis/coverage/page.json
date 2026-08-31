@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "kind": "analysis",
+  "slug": "coverage",
+  "title": "Coverage analysis",
+  "description": "An example pre-rendered notebook bundle.",
+  "order": 1,
+  "external_css": [],
+  "external_js": []
+}

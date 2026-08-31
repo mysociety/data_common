@@ -1,0 +1,20 @@
+{
+  "name": "places",
+  "title": "Places",
+  "description": "A minimal dataset used to test defaults.",
+  "version": "0.1.0",
+  "licenses": [{"name": "CC0-1.0", "title": "CC0 1.0"}],
+  "contributors": [],
+  "sources": [],
+  "custom": {},
+  "resources": [{
+    "name": "places",
+    "title": "Places",
+    "description": "Places included in the model dataset.",
+    "path": "places.csv",
+    "schema": {"fields": [
+      {"name": "code", "type": "string", "description": "Short place code."},
+      {"name": "name", "type": "string", "description": "Place name."}
+    ]}
+  }]
+}

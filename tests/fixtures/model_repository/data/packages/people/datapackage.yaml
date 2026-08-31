@@ -1,0 +1,21 @@
+name: people
+title: People
+description: A small dataset of people.
+version: 1.0.0
+licenses:
+  - name: CC-BY-4.0
+    title: Creative Commons Attribution 4.0
+custom:
+  dataset_order: 1
+  tests:
+    - test_people
+  formats:
+    csv: true
+    parquet: false
+  composite:
+    xlsx:
+      render: true
+    json:
+      render: true
+    sqlite:
+      render: true

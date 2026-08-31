@@ -1,0 +1,7 @@
+name: example
+title: Example
+description: Example legacy package.
+version: 1.0.0
+licenses:
+  - name: CC0-1.0
+custom: {}

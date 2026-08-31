@@ -1,0 +1,10 @@
+title: Legacy data
+description: Legacy description
+baseurl: /legacy
+url: https://pages.example.test
+defaults:
+  - scope:
+      type: downloads
+    values:
+      download_gate_type: soft
+      download_survey: survey-id

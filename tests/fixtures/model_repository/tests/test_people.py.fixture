@@ -1,0 +1,7 @@
+from pathlib import Path
+
+
+def test_people_dataset_has_rows():
+    repository = Path(__file__).parents[1]
+    rows = (repository / "data/packages/people/people.csv").read_text().splitlines()
+    assert len(rows) == 4

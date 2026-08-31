@@ -1,0 +1,21 @@
+name: people
+title: People
+description: People included in the model dataset.
+custom:
+  dataset_order: 1
+schema:
+  fields:
+    - name: id
+      type: integer
+      description: Stable person identifier.
+      constraints:
+        required: true
+        unique: true
+    - name: name
+      type: string
+      description: Display name.
+      constraints:
+        required: true
+    - name: active
+      type: boolean
+      description: Whether the person is active.

@@ -5,6 +5,7 @@ description = "Shared tools for mySociety data repositories"
 requires-python = ">=3.10,<3.15"
 dependencies = [
     "pandas>=2.2",
+    "pydantic>=2.3",
     "rich>=13.7",
 ]
 
@@ -17,9 +18,11 @@ dataset = [
     "click>=8.1,<9",
     "cookiecutter>=2.6",
     "duckdb>=1.1",
+    "flask>=3.1",
     "frictionless>=5",
     "geopandas>=1.0",
     "jinja2>=3.1",
+    "markdown-it-py>=3",
     "numpy>=2.0",
     "pyarrow>=14",
     "pytest>=8",
@@ -33,6 +36,7 @@ notebook = ["ipython>=8"]
 render = [
     "beautifulsoup4>=4.12",
     "htmltabletomd>=1.0",
+    "ipykernel>=6",
     "ipython-genutils>=0.2",
     "jinja2>=3.1",
     "lxml>=5",
@@ -87,6 +91,9 @@ dev = [
     "ruff>=0.6.1",
     "types-pillow>=10.2",
 ]
+test = [
+    "pytest>=8",
+]
 
 [build-system]
 requires = ["uv_build>=0.8.3,<0.13"]
@@ -96,3 +103,11 @@ build-backend = "uv_build"
 include = ["src/data_common"]
 typeCheckingMode = "basic"
 reportPrivateImportUsage = "warning"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["tests/fixtures"]
+markers = ["notebook: exercises notebook export and analysis bundle production"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["data_common"]
