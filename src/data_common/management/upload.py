@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any, ParamSpec
+from typing import Any
 
 from data_common.apis.google_api import (
     DriveIntegration,
@@ -17,7 +19,7 @@ def upload_file(
     folder_path: str | None = None,
     folder_id: str | None = None,
     drive_id: str | None = None,
-):
+) -> str:
     """
     upload file to Google drive
     """
@@ -35,7 +37,7 @@ def upload_file(
     return url
 
 
-def format_document(url: str):
+def format_document(url: str) -> None:
     """
     Apply google sheets formatter to URL
     """
@@ -49,9 +51,6 @@ def format_document(url: str):
     print(v)
 
 
-P = ParamSpec("P")
-
-
 def g_drive_upload_and_format(
     file_path: str | Path,
     file_name: str | None = None,
@@ -59,7 +58,7 @@ def g_drive_upload_and_format(
     folder_path: str | None = None,
     folder_id: str | None = None,
     drive_id: str | None = None,
-):
+) -> None:
     """
     Upload a file and then run the document formatter
     """

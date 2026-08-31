@@ -1,11 +1,14 @@
 """
-functions to export a notebook in markdown and html
+Export notebooks to Markdown and HTML.
 """
+
+from __future__ import annotations
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import nbformat
 from bs4 import BeautifulSoup
@@ -27,7 +30,9 @@ class RemoveOnContent(Preprocessor):
     remove on some content flags
     """
 
-    def preprocess(self, nb, resources):
+    def preprocess(
+        self, nb: Any, resources: dict[str, Any]
+    ) -> tuple[Any, dict[str, Any]]:
         # Filter out cells that meet the conditions
         nb.cells = [
             self.preprocess_cell(cell, resources, index)[0]
@@ -36,14 +41,18 @@ class RemoveOnContent(Preprocessor):
 
         return nb, resources
 
-    def preprocess_cell(self, cell, resources, cell_index):
+    def preprocess_cell(
+        self,
+        cell: Any,
+        resources: dict[str, Any],
+        cell_index: int,
+    ) -> tuple[Any, dict[str, Any]]:
         """
         Apply a transformation on each cell. See base.py for details.
         """
 
-        if cell["source"]:
-            if "#HIDE" == cell["source"][:5]:
-                cell.transient = {"remove_source": True}
+        if cell["source"] and "#HIDE" == cell["source"][:5]:
+            cell.transient = {"remove_source": True}
 
         return cell, resources
 
@@ -55,14 +64,24 @@ class CustomExtractOutputPreprocessor(ExtractOutputPreprocessor):
     'fix' this by deleting the first set of references to the images.
     """
 
-    def preprocess_cell(self, cell, resources, cell_index):
+    def preprocess_cell(
+        self,
+        cell: Any,
+        resources: dict[str, Any],
+        cell_index: int,
+    ) -> tuple[Any, dict[str, Any]]:
         if not hasattr(self, "first_use"):
             resources["outputs"] = {}
             self.first_use = True
         return super().preprocess_cell(cell, resources, cell_index)
 
 
-def indent(instr, nspaces=4, ntabs=0, flatten=False):
+def indent(
+    instr: str,
+    nspaces: int = 4,
+    ntabs: int = 0,
+    flatten: bool = False,
+) -> str | None:
     """
     do not indent markdown tables when exporting through this filter
     """
@@ -73,7 +92,7 @@ def indent(instr, nspaces=4, ntabs=0, flatten=False):
     return normal_indent(instr, nspaces, ntabs, flatten)
 
 
-def check_string_in_source(instr, item):
+def check_string_in_source(instr: str, item: Any) -> bool:
     for x in item["source"]:
         if instr in x:
             return True
@@ -87,7 +106,7 @@ def to_config(value) -> Config:
         raise TypeError("Not a valid config (Lazy or none)")
 
 
-class MarkdownRenderer(object):
+class MarkdownRenderer:
     self_reference = "render_to_markdown"
     exporter_class = MarkdownExporter
     default_ext = ".md"
@@ -97,11 +116,11 @@ class MarkdownRenderer(object):
 
     def __init__(
         self,
-        input_name="readme.ipynb",
-        output_name=None,
-        include_input=None,
-        clear_and_execute=None,
-    ):
+        input_name: str | Path = "readme.ipynb",
+        output_name: str | Path | None = None,
+        include_input: bool | None = None,
+        clear_and_execute: bool | None = None,
+    ) -> None:
         if include_input is None:
             include_input = self.__class__.include_input
         if clear_and_execute is None:
@@ -111,14 +130,14 @@ class MarkdownRenderer(object):
         self.include_input = include_input
         self.clear_and_execute = clear_and_execute
 
-    def check_for_self_reference(self, cell):
+    def check_for_self_reference(self, cell: Any) -> bool:
         # scope out the cell that called this function
         # prevent circular call
         contains_str = check_string_in_source(self.__class__.self_reference, cell)
         is_code = cell["cell_type"] == "code"
         return contains_str and is_code
 
-    def get_contents(self, input_file):
+    def get_contents(self, input_file: str | Path) -> Any:
         with open(input_file) as f:
             nb = json.load(f)
 
@@ -132,7 +151,7 @@ class MarkdownRenderer(object):
         nb = nbformat.reads(str_notebook, as_version=4)
         return nb
 
-    def get_config(self):
+    def get_config(self) -> Config:
         c = Config()
 
         pre_processors = []
@@ -153,7 +172,11 @@ class MarkdownRenderer(object):
         c.MarkdownExporter.exclude_input = not self.include_input
         return c
 
-    def process(self, input_file=None, output_file=None):
+    def process(
+        self,
+        input_file: str | Path | None = None,
+        output_file: str | Path | None = None,
+    ) -> None:
         # render clear markdown version of book
         # equiv of `jupyter nbconvert
         # --ClearMetadataPreprocessor.enabled=True
@@ -193,7 +216,7 @@ class MarkdownRenderer(object):
         if "outputs" in resources:
             for filename, contents in resources["outputs"].items():
                 write_location = output_base_path / filename
-                print("writing: {0}".format(write_location))
+                print(f"writing: {write_location}")
                 with open(write_location, "wb") as f:
                     f.write(contents)
 
@@ -225,17 +248,17 @@ class MarkdownRenderer(object):
         with open(output_file, "w") as f:
             f.write(body)
 
-        print("Written to {0} at {1}".format(output_file, datetime.now(tz=None)))
+        print(f"Written to {output_file} at {datetime.now(timezone.utc)}")
 
 
-class HTML_Renderer(MarkdownRenderer):
+class HTMLRenderer(MarkdownRenderer):
     self_reference = "render_to_html"
     exporter_class = HTMLExporter
     default_ext = ".html"
     include_input = True
     markdown_tables = False
 
-    def get_config(self):
+    def get_config(self) -> Config:
         c = Config()
 
         pre_processors = []
@@ -261,9 +284,13 @@ class HTML_Renderer(MarkdownRenderer):
         return c
 
 
-def render_to_markdown(*args, **kwargs):
+def render_to_markdown(*args: Any, **kwargs: Any) -> None:
     return MarkdownRenderer(*args, **kwargs).process()
 
 
-def render_to_html(*args, **kwargs):
-    return HTML_Renderer(*args, **kwargs).process()
+def render_to_html(*args: Any, **kwargs: Any) -> None:
+    return HTMLRenderer(*args, **kwargs).process()
+
+
+# Compatibility alias for repositories importing the historical class name.
+HTML_Renderer = HTMLRenderer

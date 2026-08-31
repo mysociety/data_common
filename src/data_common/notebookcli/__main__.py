@@ -1,43 +1,26 @@
-from pathlib import Path
-from typing import Optional
+from __future__ import annotations
 
 import rich_click as click
 from rich import print
 
-from data_common.management.render_processing import DocumentCollection
-
-
-class DocCollection:
-    def __init__(self):
-        self.collection: Optional[DocumentCollection] = None
-
-    def set_doc_collection(self, collection: DocumentCollection):
-        self.collection = collection
-
-
-dc = DocCollection()
-set_doc_collection = dc.set_doc_collection
-
-# load all yaml from the config folder
-top_level = Path(__file__).parent.parent.parent.parent.parent.parent
-notebook_config = top_level / "notebooks" / "_render_config"
-
-doc_collection = DocumentCollection.from_folder(notebook_config)
-set_doc_collection(doc_collection)
+from .discovery import load_document_collection, selected_documents
 
 
 @click.group()
-def cli():
-    pass
+def cli() -> None:
+    """
+    Render and publish configured notebook documents.
+    """
 
 
 @cli.command("list")
-def listdocs():
+def listdocs() -> None:
     """
-    List defined render settings
+    List defined render settings.
     """
-    for doc in doc_collection.docs.keys():
-        print(f"[blue]{doc}[/blue]")
+    collection = load_document_collection()
+    for document_name in collection.docs:
+        print(f"[blue]{document_name}[/blue]")
 
 
 @cli.command()
@@ -48,68 +31,64 @@ def listdocs():
 @click.option("--publish/--no-publish", default=False)
 def render(
     slug: str = "",
-    param: list[str] = [],
+    param: tuple[tuple[str, str], ...] = (),
     group: str = "",
     render_all: bool = False,
     publish: bool = False,
-):
+) -> None:
     """
-    Render a collection of notebooks to a document
+    Render a collection of notebooks to a document.
     """
-    params = {x: y for x, y in param}
-
-    if dc.collection is None:
-        raise ValueError("Doc collection not set")
-
-    if slug:
-        docs = [dc.collection.get(slug)]
-    elif render_all:
-        docs = dc.collection.all()
-    elif group:
-        docs = dc.collection.get_group(group)
-    else:
-        docs = [dc.collection.first()]
+    params = dict(param)
+    documents = selected_documents(
+        load_document_collection(),
+        slug=slug,
+        group=group,
+        render_all=render_all,
+    )
 
     if params:
         print("using custom params")
         print(params)
 
-    for doc in docs:
-        doc.render(context=params)
+    for document in documents:
+        document.render(context=params)
         if publish:
             print("starting publication flow")
-            doc.upload()
+            document.upload()
 
 
 @cli.command()
 @click.argument("slug", default="")
 @click.option("-p", "--param", nargs=2, multiple=True)
 @click.option("--all/--not-all", "render_all", default=False)
-def publish(slug="", param=[], render_all=False):
+def publish(
+    slug: str = "",
+    param: tuple[tuple[str, str], ...] = (),
+    render_all: bool = False,
+) -> None:
     """
-    Publish a previously rendered collection of documents to the chosen export route.
+    Publish previously rendered documents to their configured destinations.
     """
-    params = {x: y for x, y in param}
-
-    if dc.collection is None:
-        raise ValueError("Doc collection not set")
-
-    if slug:
-        docs = [dc.collection.get(slug)]
-    elif render_all:
-        docs = dc.collection.all()
-    else:
-        docs = [dc.collection.first()]
+    params = dict(param)
+    documents = selected_documents(
+        load_document_collection(),
+        slug=slug,
+        render_all=render_all,
+    )
 
     if params:
         print("using custom params")
         print(params)
 
-    for doc in docs:
-        doc.upload(params)
+    for document in documents:
+        document.upload(params)
 
 
-def run():
+def run() -> None:
+    """
+    Run the notebook command-line application.
+    """
     cli()
 
 

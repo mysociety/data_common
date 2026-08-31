@@ -1,377 +1,381 @@
 from __future__ import annotations
 
-import json
 import shutil
+import warnings
+from collections.abc import Iterable, Mapping
 from copy import deepcopy
-from dataclasses import dataclass
 from importlib import import_module
+from importlib.resources import as_file, files
 from pathlib import Path
-from typing import Any, Iterable, Optional, Type
+from typing import Any, Self
 
-import papermill as pm  # type: ignore
-import pypandoc  # type: ignore
-from bs4 import BeautifulSoup, Tag
+import pypandoc  # type: ignore[import-untyped]
 from jinja2 import Template
-from ruamel import yaml  # type: ignore
+from ruamel.yaml import YAML
 
-from ..dataset.jekyll_management import markdown_with_frontmatter
-from . import exporters as exporters
+from ..dataset.site.notebook import publish_analysis_bundle
+from ..dataset.site.schemas import AnalysisBundleMetadata
+from ..dataset.site.settings import get_site_settings
+from .notebook_rendering import Notebook, combine_outputs
+from .render_models import DocumentDefinition, RenderedDocument
 
 
-def add_tag_based_on_content(input_file: Path, tag: str, content: str):
+def render_value(value: object, context: Mapping[str, Any]) -> str:
     """
-    not all notebook editors are good with tags, but papermill uses it
-    to find the parameters cell.
-    This injects tag to the file based on the content of a cell
+    Render one configured string using the current document context.
     """
-    with open(input_file) as f:
-        nb = json.load(f)
-
-    change = False
-    for n, cell in enumerate(nb["cells"]):
-        if cell["cell_type"] == "code":
-            if cell["source"] and content in "".join(cell["source"]):
-                tags = cell["metadata"].get("Tags", [])
-                if tag not in tags:
-                    tags.append("parameters")
-                    change = True
-                nb["cells"][n]["metadata"]["tags"] = tags
-
-    if change:
-        with open(input_file, "w") as f:
-            json.dump(nb, f)
+    return Template(str(value)).render(**context)
 
 
-def render(txt: str, context: dict[str, Any]):
-    t = Template(str(txt))
-    return t.render(**context)
-
-
-def combine_outputs(parts: list[Path], output_path: Path):
-    text_parts = [open(p, "r").read() for p in parts]
-    result = "\n".join(text_parts)
-    result = result.replace("<title>Notebook</title>", "")
-    with open(output_path, "w") as f:
-        f.write(result)
-
-
-@dataclass
-class Notebook:
+def convert_to_docx(
+    input_path: Path,
+    output_path: Path,
+    resource_dir: Path,
+) -> None:
     """
-    Handle talking to and rendering one file
+    Convert rendered HTML to DOCX using the packaged reference document.
     """
-
-    name: str
-    _parent: "Document"
-
-    @property
-    def filename(self):
-        return self.name if ".ipynb" in self.name else self.name + ".ipynb"
-
-    def raw_path(self):
-        return Path("notebooks", self.filename)
-
-    def papermill_path(self, slug: str):
-        papermill_dir = Path("_render", "_papermills")
-        if papermill_dir.exists() is False:
-            papermill_dir.mkdir()
-        return Path("_render", "_papermills", slug + "_" + self.filename)
-
-    def papermill(self, slug: str, params: dict[str, Any], rerun: bool = True):
-        """
-        execute the notebook with the parameters
-        to the papermill storage folder
-        """
-        # need bit here that checks the parameters are right
-        actual_path = self.raw_path()
-        if rerun is False:
-            print("Not papermilling, just copying current file")
-            shutil.copy(self.raw_path(), self.papermill_path(slug))
-        else:
-            add_tag_based_on_content(actual_path, "parameters", "#default-params")
-            pm.execute_notebook(  # type: ignore
-                actual_path,
-                self.papermill_path(slug),
-                parameters=params,
-                kernel_name="python3",
-            )
-
-    def rendered_filename(self, slug: str, ext: str = ".md") -> Path:
-        """
-        the location the html or file is output to
-        """
-        name = self._parent.name
-        output_folder = Path("_render", "_parts", name, slug)
-        if output_folder.exists() is False:
-            output_folder.mkdir(parents=True)
-        return output_folder / (self.name + ext)
-
-    def fix_html(self, filename: Path):
-        """
-        Remove unnecessary formatting from html documents
-        """
-        content = filename.read_text()
-        soup = BeautifulSoup(content, "lxml")
-        for div in soup.find_all("a", {"class": "anchor-link"}):
-            div.decompose()
-        body = soup.find("body")
-        if not isinstance(body, Tag):
-            raise ValueError("body is not being read correctly")
-        contents = body.decode_contents()
-        with open(filename, "w") as f:
-            f.write(contents)
-
-    def render(self, slug: str, hide_input: bool = True):
-        """
-        render papermilled version to a file
-        """
-        include_input = not hide_input
-        input_path = self.papermill_path(slug)
-        exporters.render_to_markdown(  # type: ignore
-            input_path,
-            self.rendered_filename(slug, ".md"),
-            clear_and_execute=False,
-            include_input=include_input,
+    reference = files("data_common").joinpath("resources", "reference.docx")
+    with as_file(reference) as reference_path:
+        if not reference_path.is_file():
+            raise ValueError("Missing packaged DOCX reference template")
+        pypandoc.convert_file(  # type: ignore[no-untyped-call]
+            str(input_path),
+            "docx",
+            outputfile=str(output_path),
+            extra_args=[
+                f"--resource-path={resource_dir}",
+                f"--reference-doc={reference_path}",
+            ],
         )
-        exporters.render_to_html(  # type: ignore
-            input_path,
-            self.rendered_filename(slug, ".html"),
-            clear_and_execute=False,
-            include_input=include_input,
-        )
-        self.fix_html(self.rendered_filename(slug, ".html"))
 
 
 class Document:
     """
-    Get details for a single final document (made up of several notebooks)
+    Render and publish a configured document made from one or more notebooks.
     """
 
     def __init__(
-        self, name: str, data: dict[str, Any], context: Optional[dict[str, Any]] = None
-    ):
-        if context is None:
-            context = {}
+        self,
+        name: str,
+        definition: DocumentDefinition,
+        *,
+        repo_root: Path,
+        context: Mapping[str, Any] | None = None,
+    ) -> None:
         self.name = name
-        self._data = data.copy()
-        self.options = {"rerun": True, "hide_input": True}
-        self.options.update(self._data.get("options", {}))
-        self.notebooks = [Notebook(x, _parent=self) for x in self._data["notebooks"]]
-        self.init_rendered_values(context)
+        self.definition = definition
+        self.repo_root = repo_root
+        self.notebooks = [
+            Notebook(notebook, document_name=name, repo_root=repo_root)
+            for notebook in definition.notebooks
+        ]
+        self.rendered = self.rendered_values(context or {})
+        self.params = self.rendered.parameters
+        self.slug = self.rendered.slug
+        self.title = self.rendered.title
 
-    def init_rendered_values(self, context: dict[str, Any]):
+    def rendered_values(self, context: Mapping[str, Any]) -> RenderedDocument:
         """
-        for values that are going to be populated by jinja
-        this will populate/repopulate based on the currently known context
+        Resolve imported context, parameters, title, and slug.
         """
-        self._rendered_data = self._data.copy()
-        for m_path, items in self._data.get("context", {}).items():
-            mod = import_module(m_path)
-            for i in items:
-                context[i] = getattr(mod, i)
+        rendered_context = dict(context)
+        for module_path, names in self.definition.context.items():
+            module = import_module(module_path)
+            for name in names:
+                rendered_context[name] = getattr(module, name)
 
-        self.params = self.get_rendered_parameters(context)
-        rendered_properties = ["title", "slug"]
-        context = {**self.params, **context}
-        for r in rendered_properties:
-            self._rendered_data[r] = render(self._rendered_data[r], context)
-        self.slug = self._rendered_data["slug"]
-        self.title = self._rendered_data["title"]
+        parameters = self.rendered_parameters(rendered_context)
+        complete_context = {**parameters, **rendered_context}
+        return RenderedDocument(
+            title=render_value(self.definition.title, complete_context),
+            slug=render_value(self.definition.slug, complete_context),
+            parameters=parameters,
+        )
 
-    def get(self, value: str):
-        return self._data.get(value)
+    def apply_context(self, context: Mapping[str, Any]) -> None:
+        """
+        Re-render context-sensitive document attributes.
+        """
+        self.rendered = self.rendered_values(context)
+        self.params = self.rendered.parameters
+        self.slug = self.rendered.slug
+        self.title = self.rendered.title
 
-    def get_rendered_parameters(self, context: dict[str, Any]) -> dict[str, str]:
+    def get(self, value: str) -> object:
         """
-        render properties using jinga
+        Return an optional extension value from the document definition.
         """
-        raw_params = self._data.get("parameters", {})
-        final_params: dict[str, str] = {}
-        for k, v in raw_params.items():
-            nv = context.get(k, render(v, context))
-            final_params[k] = nv
-            context[k] = nv
+        return getattr(self.definition, value, None)
+
+    def rendered_parameters(self, context: dict[str, Any]) -> dict[str, Any]:
+        """
+        Render configured parameters in declaration order.
+        """
+        final_params: dict[str, Any] = {}
+        for key, value in self.definition.parameters.items():
+            rendered = context.get(key, render_value(value, context))
+            final_params[key] = rendered
+            context[key] = rendered
         return final_params
 
-    def rendered_filename(self, ext: str) -> Path:
-        return Path("_render", self.name, self.slug, self.slug + ext)
-
-    def render(self, context: Optional[dict[str, Any]] = None):
+    def rendered_filename(self, extension: str) -> Path:
         """
-        render the the file through the respective papermills
+        Return the combined document output path.
         """
-
-        if context is None:
-            context = {}
-
-        if context:
-            self.init_rendered_values(context)
-
-        render_dir = Path("_render", self.name, self.slug)
-        if render_dir.exists() is False:
-            render_dir.mkdir(parents=True)
-
-        # papermill and render individual notebooks
-        for n in self.notebooks:
-            n.papermill(self.slug, self.params, rerun=self.options["rerun"])
-            n.render(self.slug, hide_input=self.options["hide_input"])
-
-        # combine for both md and html
-        for ext in [".md", ".html"]:
-            dest = self.rendered_filename(ext)
-            files = [x.rendered_filename(self.slug, ext) for x in self.notebooks]
-            combine_outputs(files, dest)
-            resources_dir = files[0].parent / "_notebook_resources"
-            dest_resources = dest.parent / "_notebook_resources"
-            shutil.copytree(resources_dir, dest_resources, dirs_exist_ok=True)
-            # copy resources folder
-
-        # convert to docx
-        input_path_html = self.rendered_filename(".html")
-        output_path_doc = self.rendered_filename(".docx")
-        template = Path(
-            "src", "data_common", "src", "data_common", "resources", "reference.docx"
-        )
-        if template.exists() is False:
-            raise ValueError("Missing Template")
-        reference_doc = str(template)
-        print(input_path_html)
-        pypandoc.convert_file(  # type: ignore
-            str(input_path_html),
-            "docx",
-            outputfile=str(output_path_doc),
-            extra_args=[
-                f"--resource-path={str(render_dir)}",
-                f"--reference-doc={reference_doc}",
-            ],
+        return (
+            self.repo_root
+            / "_render"
+            / self.name
+            / self.slug
+            / f"{self.slug}{extension}"
         )
 
-    def upload(self, context: Optional[dict[str, Any]] = None):
+    def render(self, context: Mapping[str, Any] | None = None) -> None:
         """
-        Upload result to service
+        Execute constituent notebooks and produce combined document formats.
         """
-
         if context:
-            self.init_rendered_values(context)
+            self.apply_context(context)
 
-        for k, v in self._data["upload"].items():
-            if v is None:
-                v = {}
-            if k == "readme":
-                print("Publishing to readme")
-                source_file = self.rendered_filename(".md")
-                contents = source_file.read_text().replace(
-                    "_notebook_resources", "_readme_resources"
-                )
-                readme = Path("readme.md")
-                if readme.exists() is False:
-                    raise ValueError("readme.md not found")
-                readme_contents = readme.read_text()
-                start_anchor = v.get("start", "")
-                end_anchor = v.get("end", "")
-                if start_anchor:
-                    start_text = readme_contents.find(start_anchor)
-                else:
-                    start_text = 0
+        render_dir = self.rendered_filename(".html").parent
+        render_dir.mkdir(parents=True, exist_ok=True)
 
-                if end_anchor:
-                    end_text = readme_contents.find(end_anchor, start_text)
-                else:
-                    end_text = len(readme_contents)
-                new_content = (
-                    readme_contents[: start_text + len(start_anchor)]
-                    + contents
-                    + readme_contents[end_text:]
-                )
-                with open(readme, "w") as f:
-                    f.write(new_content)
+        for notebook in self.notebooks:
+            notebook.papermill(
+                self.slug,
+                self.params,
+                rerun=self.definition.options.rerun,
+            )
+            notebook.render(
+                self.slug,
+                hide_input=self.definition.options.hide_input,
+            )
+
+        for extension in (".md", ".html"):
+            destination = self.rendered_filename(extension)
+            fragments = [
+                notebook.rendered_filename(self.slug, extension)
+                for notebook in self.notebooks
+            ]
+            combine_outputs(fragments, destination)
+            resources_dir = fragments[0].parent / "_notebook_resources"
+            if resources_dir.exists():
                 shutil.copytree(
-                    source_file.parent / "_notebook_resources",
-                    "_readme_resources",
+                    resources_dir,
+                    destination.parent / "_notebook_resources",
                     dirs_exist_ok=True,
                 )
-            if k == "gdrive":
-                from .upload import g_drive_upload_and_format
 
-                file_name = self._rendered_data["title"]
-                file_path = self.rendered_filename(".docx")
-                g_drive_upload_and_format(
-                    file_name=file_name,
-                    file_path=file_path,
-                    drive_name=v.get("g_drive_name", None),
-                    drive_id=v.get("g_drive_id", None),
-                    folder_path=v.get("g_folder_name", None),
-                    folder_id=v.get("g_folder_id", None),
-                )
-            if k == "jekyll":
-                print("Publishing to Jekyll dir")
-                if v:
-                    front_matter = v
-                else:
-                    front_matter = {}
-                front_matter["title"] = self._rendered_data["title"]
-                analysis = Path("docs", "_analysis")
-                if analysis.exists() is False:
-                    analysis.mkdir()
-                dest = analysis / (self._rendered_data["slug"] + ".html")
-                source_file = self.rendered_filename(".html")
-                contents = source_file.read_text()
-                contents = contents.replace("_notebook_resources", "notebook_resources")
-                markdown_with_frontmatter(front_matter, dest, contents)
-                shutil.copytree(
-                    source_file.parent / "_notebook_resources",
-                    analysis / "notebook_resources",
-                    dirs_exist_ok=True,
-                )
+        convert_to_docx(
+            self.rendered_filename(".html"),
+            self.rendered_filename(".docx"),
+            render_dir,
+        )
+
+    def upload(self, context: Mapping[str, Any] | None = None) -> None:
+        """
+        Publish rendered output to all configured destinations.
+        """
+        if context:
+            self.apply_context(context)
+
+        for target, target_config in self.definition.upload.root.items():
+            config = target_config or {}
+            if target == "readme":
+                self.publish_readme(config)
+            elif target == "gdrive":
+                self.publish_google_drive(config)
+            elif target in {"site", "jekyll"}:
+                self.publish_site(config, legacy_target=target == "jekyll")
+
+    def publish_readme(self, config: Mapping[str, Any]) -> None:
+        """
+        Replace a configured section of the repository README.
+        """
+        print("Publishing to readme")
+        source_file = self.rendered_filename(".md")
+        contents = source_file.read_text().replace(
+            "_notebook_resources",
+            "_readme_resources",
+        )
+        readme = self.repo_root / "readme.md"
+        if not readme.is_file():
+            raise ValueError("readme.md not found")
+        readme_contents = readme.read_text()
+        start_anchor = str(config.get("start", ""))
+        end_anchor = str(config.get("end", ""))
+        start_text = readme_contents.find(start_anchor) if start_anchor else 0
+        end_text = (
+            readme_contents.find(end_anchor, start_text)
+            if end_anchor
+            else len(readme_contents)
+        )
+        new_content = (
+            readme_contents[: start_text + len(start_anchor)]
+            + contents
+            + readme_contents[end_text:]
+        )
+        readme.write_text(new_content)
+        resources = source_file.parent / "_notebook_resources"
+        if resources.exists():
+            shutil.copytree(
+                resources,
+                self.repo_root / "_readme_resources",
+                dirs_exist_ok=True,
+            )
+
+    def publish_google_drive(self, config: Mapping[str, Any]) -> None:
+        """
+        Upload the rendered DOCX file to Google Drive.
+        """
+        from .upload import g_drive_upload_and_format
+
+        g_drive_upload_and_format(
+            file_name=self.title,
+            file_path=self.rendered_filename(".docx"),
+            drive_name=config.get("g_drive_name"),
+            drive_id=config.get("g_drive_id"),
+            folder_path=config.get("g_folder_name"),
+            folder_id=config.get("g_folder_id"),
+        )
+
+    def publish_site(
+        self,
+        config: Mapping[str, Any],
+        *,
+        legacy_target: bool = False,
+    ) -> None:
+        """
+        Publish the rendered HTML and resources as a dataset-site bundle.
+        """
+        if legacy_target:
+            warnings.warn(
+                "The notebook upload target 'jekyll' is deprecated; "
+                "use 'site' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        print("Publishing analysis bundle for the dataset site")
+        source_file = self.rendered_filename(".html")
+        publish_analysis_bundle(
+            source_file=source_file,
+            resources_dir=source_file.parent / "_notebook_resources",
+            settings=get_site_settings(repo_root=self.repo_root),
+            slug=self.slug,
+            title=self.title,
+            metadata=AnalysisBundleMetadata.model_validate(config),
+        )
 
 
 class DocumentCollection:
     """
-    Collection of potential documents.
-    In most cases there will only be one.
+    Validate and expose all notebook documents configured in a repository.
     """
 
     @classmethod
-    def from_folder(cls: Type[DocumentCollection], dir: Path) -> DocumentCollection:
-        yaml_files = dir.glob("*.yaml")
-        all_docs = {}
-        for y in yaml_files:
-            with open(y) as stream:
-                data: dict[str, Any]
-                data = yaml.safe_load(stream)  # type: ignore
-            all_docs[y.stem] = data
-        return cls(all_docs)
+    def from_file(
+        cls,
+        path: Path,
+        *,
+        repo_root: Path | None = None,
+    ) -> Self:
+        """
+        Load a collection from one YAML file.
+        """
+        with path.open() as stream:
+            value = YAML(typ="safe", pure=True).load(stream)
+        data = value if isinstance(value, dict) else {}
+        return cls(data, repo_root=repo_root or path.parent)
 
-    def __init__(self, data: dict[str, Any]):
-        for k, v in data.items():
-            if "meta" not in v:
-                data[k]["meta"] = False
-            if "extends" in v:
-                base = deepcopy(data[v["extends"]])
-                if "meta" in base:
-                    base.pop("meta")
-                base.update(v)
-                base.pop("extends")
-                data[k] = base
+    @classmethod
+    def from_folder(
+        cls,
+        directory: Path,
+        *,
+        repo_root: Path | None = None,
+    ) -> Self:
+        """
+        Load a collection from all YAML files in a directory.
+        """
+        data: dict[str, Any] = {}
+        loader = YAML(typ="safe", pure=True)
+        for yaml_file in sorted(directory.glob("*.yaml")):
+            with yaml_file.open() as stream:
+                data[yaml_file.stem] = loader.load(stream)
+        return cls(data, repo_root=repo_root or Path.cwd())
 
-        for k, v in data.items():
-            if "group" not in v:
-                data[k]["group"] = None
+    def __init__(
+        self,
+        data: Mapping[str, Any],
+        *,
+        repo_root: Path | None = None,
+    ) -> None:
+        self.repo_root = (repo_root or Path.cwd()).resolve()
+        resolved = self.resolve_definitions(data)
+        self.docs = {
+            name: Document(
+                name,
+                DocumentDefinition.model_validate(definition),
+                repo_root=self.repo_root,
+            )
+            for name, definition in resolved.items()
+        }
 
-        self.docs = {name: Document(name, data) for name, data in data.items()}
+    @staticmethod
+    def resolve_definitions(
+        data: Mapping[str, Any],
+    ) -> dict[str, dict[str, Any]]:
+        """
+        Apply document inheritance before validating each definition.
+        """
+        resolved: dict[str, dict[str, Any]] = {}
+        for name, raw_definition in data.items():
+            if not isinstance(raw_definition, Mapping):
+                raise TypeError(f"Document {name!r} must be a mapping")
+            definition = dict(raw_definition)
+            parent_name = definition.get("extends")
+            if parent_name:
+                parent = data.get(str(parent_name))
+                if not isinstance(parent, Mapping):
+                    raise ValueError(
+                        f"Document {name!r} extends unknown document {parent_name!r}"
+                    )
+                inherited = deepcopy(dict(parent))
+                inherited.pop("meta", None)
+                inherited.update(definition)
+                definition = inherited
+            definition.pop("extends", None)
+            resolved[str(name)] = definition
+        return resolved
 
-    def all(self) -> Iterable[Any]:
-        for d in self.docs.values():
-            if d._data["meta"] is False:  # type: ignore
-                yield d
+    def all(self) -> Iterable[Document]:
+        """
+        Yield documents not marked as configuration-only metadata.
+        """
+        return (
+            document for document in self.docs.values() if not document.definition.meta
+        )
 
-    def get_group(self, group: str) -> Iterable[Any]:
-        for d in self.all():
-            if d._data["group"] == group:
-                yield d
+    def get_group(self, group: str) -> Iterable[Document]:
+        """
+        Yield publishable documents belonging to a named group.
+        """
+        return (
+            document for document in self.all() if document.definition.group == group
+        )
 
     def first(self) -> Document:
-        return list(self.docs.values())[0]
+        """
+        Return the first configured document.
+        """
+        try:
+            return next(iter(self.docs.values()))
+        except StopIteration as error:
+            raise ValueError("No notebook documents are configured") from error
 
     def get(self, item: str) -> Document:
+        """
+        Return a configured document by name.
+        """
         return self.docs[item]

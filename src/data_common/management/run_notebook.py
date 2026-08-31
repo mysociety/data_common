@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import nbformat
 from nbconvert.preprocessors.execute import ExecutePreprocessor
 
 
-def run_notebook(notebook_filename: Path, save: bool = True):
+def run_notebook(notebook_filename: Path, save: bool = True) -> None:
     """
     Run a notebook as part of another process
     """
