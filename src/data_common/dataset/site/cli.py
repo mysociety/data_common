@@ -71,6 +71,44 @@ def routes_command(as_json: bool) -> None:
         click.echo(f"{target.url} -> {target.destination}")
 
 
+@site_cli.command("migrate")
+@click.option(
+    "--repo-root",
+    type=click.Path(path_type=Path, file_okay=False),
+    default=None,
+)
+@click.option("--apply", "apply_changes", is_flag=True)
+@click.option("--force", is_flag=True)
+@click.option(
+    "--ignore-published",
+    is_flag=True,
+    help="Add data/packages/_published to .gitignore.",
+)
+def migrate_command(
+    repo_root: Path | None,
+    apply_changes: bool,
+    force: bool,
+    ignore_published: bool,
+) -> None:
+    """
+    Convert a Jekyll repository to the shared Flask site layout.
+    """
+    from .migration import migrate_repository
+
+    report = migrate_repository(
+        repo_root=repo_root,
+        apply=apply_changes,
+        force=force,
+        ignore_published=ignore_published,
+    )
+    prefix = "Applied" if report.applied else "Would apply"
+    for action in report.actions:
+        click.echo(f"{prefix}: {action}")
+    for warning in report.warnings:
+        click.echo(f"Warning: {warning}", err=True)
+    if not report.changed:
+        click.echo("Repository is already migrated.")
+
 
 @site_cli.command("serve")
 @click.option("--host", default="127.0.0.1", show_default=True)
