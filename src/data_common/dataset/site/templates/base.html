@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% if page and page.title %}{{ page.title }} - {% endif %}{{ site_settings.title }}{% endblock %}</title>
+  <meta name="description" content="{% block description %}{{ site_settings.description }}{% endblock %}">
+  <link rel="canonical" href="{{ site_settings.canonical_url }}{{ request.path.removeprefix(site_settings.base_url) }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro%3A400%2C600%2C700%2C900%2C400italic&amp;display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+  {% block styles %}{% endblock %}
+  {% if page %}
+    {% for sheet in page.external_css | default([]) %}
+      <link rel="stylesheet" href="{{ sheet }}">
+    {% endfor %}
+  {% endif %}
+  <style>:root { --brand-colour: {{ site_settings.accent_colour }}; }</style>
+</head>
+<body>
+  <div class="ms-header">
+    <nav class="ms-header__row">
+      <a class="ms-header__logo" href="https://www.mysociety.org">mySociety</a>
+    </nav>
+  </div>
+  <header class="site-header">
+    <div class="container">
+      <h1><a href="{{ site_path() }}">{{ site_settings.title }}</a></h1>
+      {% if site_settings.navigation %}
+        <div class="nav-position">
+          <nav class="site-nav" aria-label="Main navigation">
+            <ul>
+              {% for item in site_settings.navigation %}
+                <li><a href="{{ item.url }}">{{ item.title }}</a></li>
+              {% endfor %}
+            </ul>
+          </nav>
+        </div>
+      {% endif %}
+    </div>
+  </header>
+
+  <div class="page-wrapper">
+    <main class="main-content container">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <footer class="mysoc-footer">
+    <div class="container mysoc-footer__primary">
+      <section>
+        <h2 class="mysoc-footer__site-name">
+          <a class="mysoc-footer__org-logo" href="https://www.mysociety.org">mySociety</a>
+        </h2>
+        <p>
+          mySociety is a not-for-profit social enterprise, based in the UK but working with partners internationally. We build and share digital technologies that help people be active citizens, across the three areas of Democracy, Transparency, and Community.
+        </p>
+      </section>
+      <nav class="mysoc-footer__links" aria-label="Footer">
+        <ul>
+          <li><a href="https://www.mysociety.org/about/">About</a></li>
+          <li><a href="https://www.mysociety.org/about/careers/">Careers</a></li>
+          <li><a href="https://www.mysociety.org/contact/">Contact</a></li>
+        </ul>
+        <ul>
+          <li><a href="https://www.mysociety.org/press/">Press</a></li>
+          <li><a href="https://www.mysociety.org/privacy/">Privacy policy</a></li>
+          <li><a href="https://www.mysociety.org/subscribe/">Subscribe</a></li>
+          <li><a href="https://www.mysociety.org/united-nations-sustainable-development-goals/">Sustainable Development</a></li>
+        </ul>
+      </nav>
+      <aside class="mysoc-footer__donate">
+        <p>Your donations keep this site and others like it running</p>
+        <a class="mysoc-footer__donate-button" href="https://www.mysociety.org/donate/">Donate now</a>
+      </aside>
+    </div>
+    <div class="container">
+      <hr class="mysoc-footer__divider">
+      <div class="mysoc-footer__secondary">
+        <p class="mysoc-footer__legal">
+          mySociety is a registered charity in England and Wales (1076346) and a limited company (03277032). We provide commercial services through our wholly owned subsidiary <a href="https://www.societyworks.org">SocietyWorks Ltd</a> (05798215).
+        </p>
+        <ul class="mysoc-footer__social">
+          <li><a class="mysoc-footer__social-link mysoc-footer__social-link--github" href="https://github.com/mysociety/">GitHub</a></li>
+          <li><a class="mysoc-footer__social-link mysoc-footer__social-link--facebook" href="https://www.facebook.com/mySociety/">Facebook</a></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+  <script src="{{ url_for('static', filename='js/site.js') }}"></script>
+  {% if page %}
+    {% for script in page.external_js | default([]) %}
+      <script src="{{ script }}"></script>
+    {% endfor %}
+  {% endif %}
+  {% block scripts %}{% endblock %}
+</body>
+</html>

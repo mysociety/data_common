@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/syntax.css') }}">
+{% endblock %}
+{% block content %}
+  <h1>{{ page.package_title }}</h1>
+  <h2>{{ page.filename }}</h2>
+  <p>Version: <strong>{{ page.version }}</strong></p>
+
+  {% if gate == "soft" %}
+    <div class="download-actions">
+      <a class="download-button download-option download-link" href="{{ site_path(page.file) }}" download>Download {{ page.filename }}</a>
+      {% if site_settings.downloads.show_code_examples %}
+        <a class="download-button code-button" href="#code-example">Integrate with code</a>
+      {% endif %}
+      {% if site_settings.downloads.show_subscription %}
+        <a class="download-button subscribe-button" href="#subscribe">Sign up for data updates</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <p><a href="{{ site_path('datasets/' ~ page.package ~ '/' ~ page.package_route) }}">Return to data package page.</a></p>
+
+  {% if site_settings.downloads.show_code_examples %}
+    <section id="code-example" class="reveal-panel hidden">
+      <hr>
+      <h2>Integrating with code</h2>
+      <h3>Using Python</h3>
+      <pre class="language-python"><code class="language-python">from mysoc_dataset import get_dataset_url, get_dataset_df
+
+url = get_dataset_url(
+    repo_name="{{ site_settings.base_url.lstrip('/') }}",
+    package_name="{{ page.package }}",
+    version_name="{{ page.version }}",
+    file_name="{{ page.filename }}",
+)
+
+df = get_dataset_df(
+    repo_name="{{ site_settings.base_url.lstrip('/') }}",
+    package_name="{{ page.package }}",
+    version_name="{{ page.version }}",
+    file_name="{{ page.filename }}",
+)</code></pre>
+      <h3>Using the command line</h3>
+      <pre class="language-bash"><code class="language-bash">mysoc-dataset download \
+  --repo {{ site_settings.base_url.lstrip('/') }} \
+  --package {{ page.package }} \
+  --version {{ page.version }} \
+  --file {{ page.filename }}</code></pre>
+    </section>
+  {% endif %}
+
+  {% if site_settings.downloads.show_subscription %}
+    <section id="subscribe" class="reveal-panel hidden">
+      <hr>
+      <h2>Subscribe to data updates</h2>
+      <p>Receive updates about new dataset releases and important corrections.</p>
+      <p><a class="download-button" href="https://www.mysociety.org/subscribe/">Open the subscription form</a></p>
+    </section>
+  {% endif %}
+
+  {% if survey_url %}
+    <hr>
+    <section id="survey">
+      <h2>{{ form_header }}</h2>
+      <noscript><a href="{{ survey_url }}">Open the survey</a></noscript>
+      <script>
+        document.write('<script src="{{ survey_url | safe }}&__no_style=true&__output=embedjs&__ref=' + encodeURIComponent(document.location.href) + '"><\/script>');
+      </script>
+    </section>
+  {% endif %}
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/prism.js') }}"></script>
+{% endblock %}

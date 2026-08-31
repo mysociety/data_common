@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>{{ page.title }}</h1>
+
+  {% if latest and latest.full_version != page.full_version %}
+    <p>
+      Version: <strong>{{ page.full_version }}</strong>. This is not the
+      <a href="{{ site_path('datasets/' ~ page.name ~ '/latest') }}">latest version</a>.
+      <a href="{{ site_path('datasets/' ~ page.name ~ '/versions') }}">See all versions</a>.
+    </p>
+  {% else %}
+    <p>
+      Version: <strong>{{ page.full_version }}</strong>. This is the latest version.
+      <a href="{{ site_path('datasets/' ~ page.name ~ '/versions') }}">See all versions</a>.
+    </p>
+  {% endif %}
+
+  <h2>Description</h2>
+  {{ page.description | markdown }}
+
+  {% if page.data.contributors %}
+    <h2>Contributors</h2>
+    <ul>
+      {% for author in page.data.contributors %}
+        <li>{% if author.path %}<a href="{{ author.path }}">{{ author.title }}</a>{% else %}{{ author.title }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if page.data.sources %}
+    <h2>Sources</h2>
+    <ul>
+      {% for source in page.data.sources %}
+        <li>{% if source.path %}<a href="{{ source.path }}">{{ source.title }}</a>{% else %}{{ source.title }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if page.data.licenses %}
+    <h2>Licences</h2>
+    <ul>
+      {% for licence in page.data.licenses %}
+        <li>{% if licence.path %}<a href="{{ licence.path }}">{{ licence.title }}</a>{% else %}{{ licence.title }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if composite_downloads %}
+    <h2>Download options</h2>
+    <ul class="download-list">
+      {% for download in composite_downloads %}
+        <li>
+          <a class="download-button download-option" href="{{ site_path('downloads/' ~ download.route_id ~ '/' ~ download.route_version) }}">
+            {{ download.option_label }}
+          </a>
+        </li>
+      {% endfor %}
+      {% if explore_in_datasette %}
+        <li>
+          <a class="download-button download-option" href="https://data.mysociety.org/datasette/?mysoc={{ site_settings.base_url.lstrip('/') }}/{{ page.name }}/{{ page.version }}">
+            Explore data in Datasette
+          </a>
+        </li>
+      {% endif %}
+    </ul>
+  {% endif %}
+
+  <h2>Individual tables</h2>
+
+  {% for resource in page.data.resources %}
+    <section id="{{ resource.name }}">
+      <h3>Table: {{ resource.title }}</h3>
+      {{ resource.description | markdown }}
+
+      <div class="download-row">
+        {% for download in resource_downloads.get(resource.name, []) %}
+          <a class="download-button download-option" href="{{ site_path('downloads/' ~ download.route_id ~ '/' ~ download.route_version) }}">
+            {{ download.option_label }}
+          </a>
+        {% endfor %}
+      </div>
+
+      <h4>Data description</h4>
+      <div class="table-scroll">
+        <table class="resource-table">
+          <thead>
+            <tr>
+              <th>Column name</th>
+              <th>Data type</th>
+              <th>Description</th>
+              <th>Unique</th>
+              <th>Required values</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for field in resource.schema.fields %}
+              <tr>
+                <td class="field-name">{{ field.name }}</td>
+                <td>{{ field.type }}</td>
+                <td>{{ field.description }}</td>
+                <td>{% if field.constraints and field.constraints.unique %}Yes{% else %}No{% endif %}</td>
+                <td>{{ field.constraints.enum | join(', ') }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endfor %}
+
+  {% if page.data.custom.change_log %}
+    <h2>Change log</h2>
+    {% for version, message in page.data.custom.change_log | dictsort(reverse=true) %}
+      <h3>{{ version }}</h3>
+      <p>{{ message }}</p>
+    {% endfor %}
+  {% endif %}
+{% endblock %}

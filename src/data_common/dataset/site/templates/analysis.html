@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+  <article class="analysis">
+    <h1>{{ page.title }}</h1>
+    {% if page.description %}<p class="lead">{{ page.description }}</p>{% endif %}
+    {{ page.body_html | safe }}
+  </article>
+{% endblock %}
+{% block scripts %}
+  <script>
+    if (window.jQuery && jQuery.fn.DataTable) {
+      jQuery(function () {
+        jQuery('table').DataTable({paging: false, ordering: true, info: false});
+      });
+    }
+  </script>
+{% endblock %}

@@ -1,0 +1,713 @@
+/* Native CSS port of the pinned mySociety documentation theme. */
+
+@layer reset, theme, components, utilities;
+
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    color-scheme: light;
+    scroll-behavior: smooth;
+  }
+
+  body,
+  h1,
+  h2,
+  h3,
+  h4,
+  p,
+  ul {
+    margin-block-start: 0;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  img,
+  svg {
+    max-inline-size: 100%;
+    block-size: auto;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+}
+
+@layer theme {
+  :root {
+    --brand-colour: #4faded;
+    --brand-dark: color-mix(in srgb, var(--brand-colour), #000 24%);
+    --ink: #333;
+    --muted: #6c6b68;
+    --paper: #fff;
+    --canvas: #f3f1eb;
+    --border: #e2dfd9;
+    --table-heading: color-mix(in srgb, var(--brand-colour), #fff 84%);
+    --footer: #333;
+    --footer-muted: #acacac;
+    --link: #2197e8;
+    --focus: #ffd836;
+    --danger: #e04b4b;
+    --font-sans: "Source Sans Pro", "Helvetica Neue", Arial, Helvetica, sans-serif;
+    --font-mono: Consolas, "Liberation Mono", Courier, monospace;
+    --step--1: clamp(0.86rem, 0.82rem + 0.16vw, 0.95rem);
+    --step-0: clamp(1rem, 0.94rem + 0.22vw, 1.12rem);
+    --step-1: clamp(1.2rem, 1.05rem + 0.55vw, 1.5rem);
+    --step-2: clamp(1.5rem, 1.2rem + 1vw, 2.1rem);
+    --step-3: clamp(1.9rem, 1.4rem + 1.7vw, 2.8rem);
+    --space-1: 0.4rem;
+    --space-2: 0.75rem;
+    --space-3: 1rem;
+    --space-4: 1.5rem;
+    --space-5: 2rem;
+    --space-6: 3rem;
+    --radius: 0.25rem;
+    --content-width: 63.333333333em;
+    font-family: var(--font-sans);
+    color: var(--ink);
+    background: var(--canvas);
+  }
+
+  body {
+    min-block-size: 100vh;
+    font-size: 1.125rem;
+    line-height: 1.555555556;
+    text-rendering: optimizeLegibility;
+  }
+
+  a {
+    color: var(--link);
+    text-decoration: none;
+  }
+
+  a:hover,
+  a:active,
+  a:focus {
+    text-decoration: underline;
+  }
+
+  :focus-visible {
+    outline: 0.2rem solid var(--focus);
+    outline-offset: 0.18rem;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    margin-block: 0 0.5em;
+    line-height: 1.1;
+  }
+
+  h1 {
+    font-size: 2.666666667em;
+    font-weight: 700;
+  }
+
+  h2 {
+    font-size: 1.666666667em;
+    font-weight: 600;
+  }
+
+  h3 {
+    padding-block-start: 0.625rem;
+    font-size: 1.444444444em;
+    font-weight: 600;
+  }
+
+  h4 {
+    font-size: 1em;
+    text-transform: uppercase;
+  }
+
+  p {
+    line-height: 1.4375;
+  }
+
+  pre,
+  code,
+  kbd,
+  samp {
+    font-family: var(--font-mono);
+  }
+
+  code {
+    padding-inline: 0.2em;
+    color: var(--danger);
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 0.1875rem;
+  }
+
+  a code {
+    color: inherit;
+    border-color: transparent;
+  }
+
+  hr {
+    margin: 0;
+    border: 0;
+    border-block-start: 1px solid var(--border);
+  }
+
+  ul {
+    padding-inline-start: 1.3em;
+  }
+
+  blockquote {
+    margin-inline-start: 0;
+    padding-inline-start: 1em;
+    color: var(--muted);
+    border-inline-start: 5px solid var(--canvas);
+    font-style: italic;
+  }
+}
+
+@layer components {
+  .container {
+    inline-size: 100%;
+    max-inline-size: var(--content-width);
+    margin-inline: auto;
+    padding-inline: 1em;
+  }
+
+  .ms-header {
+    background: transparent;
+    border-block-start: 4px solid #424242;
+  }
+
+  .ms-header__row {
+    position: relative;
+    display: block;
+    inline-size: 100%;
+    max-inline-size: var(--content-width);
+    block-size: 0;
+    margin-inline: auto;
+    padding-inline: 1em;
+  }
+
+  .ms-header__logo {
+    position: absolute;
+    z-index: 2;
+    inset-block-start: -4px;
+    inset-inline-end: 0.75rem;
+    display: block;
+    inline-size: 2.75rem;
+    block-size: 2.375rem;
+    overflow: hidden;
+    color: transparent;
+    background: #424242 url("../img/mysociety-bloom.svg") 0.6875rem 0.4375rem / 1.375rem auto no-repeat;
+    border-radius: 0 0 0.75rem 0.75rem;
+    white-space: nowrap;
+  }
+
+  .site-header {
+    padding-block: 1em;
+    color: var(--paper);
+    background: var(--brand-colour);
+    border-block-start: 0.375em solid #424242;
+  }
+
+  .site-header .container {
+    position: relative;
+  }
+
+  .site-header h1 {
+    max-inline-size: none;
+    margin: 0 0 0.2em;
+    font-size: 2em;
+    font-weight: 700;
+  }
+
+  .site-header a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .site-header a:hover,
+  .site-header a:focus {
+    text-decoration: underline;
+  }
+
+  .nav-position {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: 10rem;
+    margin-block-start: -1em;
+  }
+
+  .site-nav ul {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .site-nav a {
+    display: block;
+    margin-inline-end: 0.66em;
+    padding: 0.33em;
+    font-size: 1.125em;
+  }
+
+  .page-wrapper {
+    padding-block: 0.625rem 2rem;
+  }
+
+  .main-content {
+    padding: 1.6em 5%;
+    background: var(--paper);
+    border: 1px solid color-mix(in srgb, var(--border), transparent 30%);
+    box-shadow: 0 0.0625rem 0.4375rem 0.0625rem rgb(0 0 0 / 8%);
+  }
+
+  .main-content > :first-child {
+    margin-block-start: 0;
+  }
+
+  .main-content section {
+    scroll-margin-block-start: var(--space-4);
+  }
+
+  .lead {
+    max-inline-size: 72ch;
+    margin-block: 0 1.2em;
+    padding-block-end: 1em;
+    color: var(--muted);
+    border-block-end: 1px solid var(--border);
+    font-size: 1.1875em;
+  }
+
+  .lead p {
+    margin-block-end: 0;
+  }
+
+  .item-list li {
+    margin-block: 0.5em;
+  }
+
+  .download-list {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: 0;
+    list-style: none;
+  }
+
+  .download-list li {
+    inline-size: min(100%, 24em);
+    margin: 0;
+  }
+
+  .download-actions,
+  .download-row {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-inline-size: 24em;
+    gap: var(--space-2);
+    margin-block: var(--space-3);
+  }
+
+  .download-button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-block-size: 2.375rem;
+    padding: 0.375rem 0.75rem;
+    color: #fff;
+    background: #0277d1;
+    border: 1px solid #0277d1;
+    border-radius: var(--radius);
+    font-family: "Lato", Arial, sans-serif;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    text-decoration: none;
+    transition: background-color 150ms ease, border-color 150ms ease;
+  }
+
+  .download-list .download-button,
+  .download-actions .download-button,
+  .download-row .download-button {
+    inline-size: 100%;
+  }
+
+  .download-option::after {
+    content: "";
+    flex: 0 0 1em;
+    inline-size: 1em;
+    block-size: 1em;
+    margin-inline-start: auto;
+    background: url("../img/icon-download.svg") center / contain no-repeat;
+  }
+
+  .download-button:hover,
+  .download-button:active,
+  .download-button:focus {
+    color: #fff;
+    background: #005cab;
+    border-color: #005cab;
+    text-decoration: none;
+  }
+
+  .reveal-panel {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+  }
+
+  .table-scroll {
+    max-inline-size: 100%;
+    overflow-x: auto;
+  }
+
+  table {
+    border-collapse: collapse;
+    border-spacing: 0;
+  }
+
+  .resource-table {
+    inline-size: 100%;
+    font-size: var(--step--1);
+  }
+
+  .resource-table th,
+  .resource-table td {
+    padding: 0.3125rem;
+    border: 1px solid #333;
+    text-align: start;
+    vertical-align: top;
+  }
+
+  .resource-table th {
+    background: var(--paper);
+  }
+
+  .resource-table tbody tr:nth-child(even) {
+    background: var(--border);
+  }
+
+  .resource-table th {
+    padding-inline-end: 1.25rem;
+  }
+
+  .field-name {
+    inline-size: 12.5rem;
+    font-family: var(--font-mono);
+  }
+
+  pre {
+    display: block;
+    max-inline-size: 100%;
+    overflow-x: auto;
+    padding: 1em;
+    color: inherit;
+    background: var(--paper);
+    border-block: 3px solid var(--border);
+    border-radius: 0;
+    font-size: 0.9375em;
+    line-height: 1.4375;
+    tab-size: 4;
+    white-space: pre-wrap;
+  }
+
+  pre code {
+    padding: 0;
+    color: inherit;
+    background: none;
+    border: 0;
+    font-size: 1em;
+  }
+
+  input[type="text"],
+  input[type="password"],
+  input[type="url"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="search"],
+  input[type="number"],
+  textarea,
+  .standard-input {
+    max-inline-size: 100%;
+    padding: 0.33em;
+    border: 1px solid #e4e3dd;
+    border-radius: 0.1875rem;
+  }
+
+  .dataTables_wrapper {
+    padding-block-end: 1.875rem;
+  }
+
+  .analysis :where(figure, .dataframe) {
+    margin-inline: 0;
+    max-inline-size: 100%;
+  }
+
+  .mysoc-footer {
+    margin-block-start: 2em;
+    padding-block: 2em;
+    color: #acacac;
+    background: #333;
+    line-height: 1.5;
+  }
+
+  .mysoc-footer p {
+    margin-block-start: 0;
+  }
+
+  .mysoc-footer a {
+    color: #fff;
+  }
+
+  .mysoc-footer__primary {
+    display: block;
+  }
+
+  .mysoc-footer__site-name {
+    margin: 0 0 0.5em;
+    font-size: 1.5em;
+    line-height: 1;
+  }
+
+  .mysoc-footer__org-logo {
+    display: block;
+    inline-size: 9.5rem;
+    block-size: 2rem;
+    overflow: hidden;
+    color: transparent;
+    margin-block-start: 0.5em;
+    text-indent: -1000%;
+    background: url("../img/mysociety-logo.svg") left center / 9.5rem 2rem no-repeat;
+    white-space: nowrap;
+  }
+
+  .mysoc-footer__links {
+    display: block;
+    margin-block: 1em;
+    padding-block-start: 0;
+    line-height: 1.2;
+  }
+
+  .mysoc-footer__links ul,
+  .mysoc-footer__social {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .mysoc-footer__links li {
+    margin-block-end: 0.5em;
+  }
+
+  .mysoc-footer__links a {
+    display: block;
+  }
+
+  .mysoc-footer__donate {
+    align-self: start;
+    padding: 1.5rem;
+    color: #fff;
+    background: #404040;
+    border-radius: 0.3rem;
+    margin-block-start: 1em;
+  }
+
+  .mysoc-footer__donate-button {
+    display: inline-block;
+    padding: 0.5em 1em;
+    color: #fff;
+    background: var(--danger);
+    border-radius: 0.3rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .mysoc-footer__donate-button:hover,
+  .mysoc-footer__donate-button:focus {
+    background: color-mix(in srgb, var(--danger), #000 12%);
+    text-decoration: none;
+  }
+
+  .mysoc-footer__divider {
+    margin-block: 2em;
+    border: 0;
+    border-block-start: 1px solid #4b4b4b;
+  }
+
+  .mysoc-footer__secondary {
+    display: block;
+  }
+
+  .mysoc-footer__legal {
+    margin-block-end: 0;
+    color: #9a9a9a;
+    font-size: 0.8em;
+  }
+
+  .mysoc-footer__social {
+    display: flex;
+    justify-content: flex-start;
+    gap: 0.5rem;
+  }
+
+  .mysoc-footer__social-link {
+    display: block;
+    inline-size: 2rem;
+    block-size: 2rem;
+    overflow: hidden;
+    color: transparent;
+    text-indent: -1000%;
+    background-position: center;
+    background-size: 2rem 2rem;
+    border-radius: 50%;
+    white-space: nowrap;
+  }
+
+  .mysoc-footer__social-link--github {
+    background-image: url("../img/icon-github.svg");
+  }
+
+  .mysoc-footer__social-link--facebook {
+    background-image: url("../img/icon-facebook.svg");
+  }
+}
+
+@layer utilities {
+  .hidden,
+  [hidden] {
+    display: none !important;
+  }
+}
+
+@media (min-width: 30em) {
+  .ms-header__logo {
+    inline-size: 7.8125rem;
+    block-size: 2.4375rem;
+    background-image: url("../img/mysociety-logo.svg");
+    background-position: 1rem 0.625rem;
+    background-size: 5.8125rem auto;
+    border-radius: 0 0 1rem 1rem;
+  }
+
+  .site-header h1 {
+    max-inline-size: calc(100% - 8rem);
+  }
+}
+
+@media (min-width: 48em) {
+  .site-header h1 {
+    max-inline-size: 50%;
+  }
+}
+
+@media (min-width: 56.888888889em) {
+  .mysoc-footer__primary {
+    display: grid;
+    grid-template-columns: 5fr 4fr 3fr;
+    gap: 2em;
+  }
+
+  .mysoc-footer__links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2em;
+    margin-block: 0;
+    padding-block-start: 2.25em;
+  }
+
+  .mysoc-footer__donate {
+    margin-block-start: 0;
+  }
+
+  .mysoc-footer__secondary {
+    display: grid;
+    grid-template-columns: 9fr 3fr;
+    gap: 2em;
+    align-items: start;
+  }
+
+  .mysoc-footer__social {
+    justify-content: flex-end;
+    margin-block-start: 0;
+  }
+}
+
+@media (min-height: 700px) {
+  .mysoc-footer {
+    padding-block: 3em;
+  }
+}
+
+@media (min-height: 900px) {
+  .mysoc-footer {
+    padding-block: 4em;
+  }
+
+  .mysoc-footer__divider {
+    margin-block: 3em;
+  }
+}
+
+@media (max-width: 42rem) {
+  .site-header .nav-position {
+    position: static;
+    margin-block-start: var(--space-3);
+  }
+
+  .site-header nav {
+    margin-block-start: var(--space-3);
+  }
+
+  .site-header nav ul {
+    display: grid;
+    gap: var(--space-1);
+  }
+
+  .main-content {
+    padding-inline: calc(5% + 1em);
+    border-inline: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .download-button {
+    transition: none;
+  }
+}
+
+@media print {
+  :root {
+    background: #fff;
+  }
+
+  .ms-header,
+  .site-header nav,
+  .mysoc-footer,
+  .download-actions,
+  .download-row {
+    display: none;
+  }
+
+  .main-content {
+    inline-size: 100%;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+  }
+}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Dataset: {{ page.title }}</h1>
+  <p>Versions are grouped where multiple labels ('latest', or the major or minor shortcuts), refer to the same actual release.</p>
+  <h2>Versions</h2>
+  <ul>
+    {% for version in page.versions %}
+      <li>
+        {{ version.full_version }} —
+        {% for label in version.labels %}
+          <a href="{{ site_path('datasets/' ~ page.name ~ '/' ~ (label | route_version)) }}">{{ label }}</a>{% if not loop.last %}, {% endif %}
+        {% endfor %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}

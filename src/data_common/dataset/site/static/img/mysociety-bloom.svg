@@ -1,0 +1,10 @@
+<svg width="22" height="22" viewBox="0 0 22 22" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title">
+  <title id="title">mySociety</title>
+  <circle cx="11" cy="3" r="2.2" fill="#f94950"/>
+  <circle cx="16.7" cy="5.4" r="2.2" fill="#fa9c30"/>
+  <circle cx="19" cy="11" r="2.2" fill="#fcee21"/>
+  <circle cx="16.7" cy="16.6" r="2.2" fill="#9fdb50"/>
+  <circle cx="11" cy="19" r="2.2" fill="#41baec"/>
+  <circle cx="5.3" cy="16.6" r="2.2" fill="#9c4cd8"/>
+  <circle cx="3" cy="11" r="2.2" fill="#c749c3"/>
+</svg>
