@@ -651,10 +651,10 @@ class DataPackage:
         resource = self.resources()[slug]
         resource.rebuild_yaml()
 
-    def rebuild_all_resources(self) -> None:
+    def rebuild_all_resources(self, force_schema: bool = False) -> None:
         is_geodata = self.is_geodata()
         for resource in self.resources().values():
-            resource.rebuild_yaml(is_geodata=is_geodata)
+            resource.rebuild_yaml(is_geodata=is_geodata, force_schema=force_schema)
 
     def is_geodata(self) -> bool:
         return self.extras.is_geodata

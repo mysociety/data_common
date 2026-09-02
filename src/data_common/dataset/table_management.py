@@ -21,6 +21,9 @@ class SchemaValidator(TypedDict):
     fields: list[TypedFieldSchema]
 
 
+NON_SCALAR_TYPES = (list, tuple, set, dict, np.ndarray)
+
+
 def expand_array(series: pd.Series) -> pd.Series:
     """
     This function takes in a series and returns a new series where any arrays have been expanded into separate rows.
@@ -29,6 +32,31 @@ def expand_array(series: pd.Series) -> pd.Series:
     if any(isinstance(x, (list, tuple, np.ndarray)) for x in series):
         return series.apply(str)  # type: ignore
     return series
+
+
+def refine_object_field_type(series: pd.Series, inferred_type: str) -> str:
+    """
+    Correct the field type pandas infers for an object-dtype column.
+
+    build_table_schema derives types from the dtype alone, so every
+    object-dtype column is reported as "string". Validation reads the file
+    natively and sees the real Python values, so a column holding lists or
+    booleans is then rejected against a "string" field. Frictionless has no
+    type that accepts a numpy array - "array" and "object" both refuse one -
+    so non-scalar columns are described as "any".
+    """
+    if inferred_type != "string":
+        return inferred_type
+
+    values = series.dropna()
+    if values.empty:
+        return inferred_type
+
+    if any(isinstance(value, NON_SCALAR_TYPES) for value in values):
+        return "any"
+    if all(isinstance(value, (bool, np.bool_)) for value in values):
+        return "boolean"
+    return inferred_type
 
 
 def is_unique(series: pd.Series) -> bool:
@@ -94,8 +122,12 @@ class Schema:
         enums: dict[str, Any],
     ) -> TypedFieldSchema:
         col = df[field["name"]]
+        field["type"] = refine_object_field_type(col, field["type"])
         field["description"] = descriptions.get(field["name"], None)
-        field["constraints"] = {"unique": is_unique(col)}
+        # a uniqueness constraint on a non-scalar column cannot be enforced:
+        # validation keys cells by value, and a numpy array is unhashable.
+        unique = False if field["type"] == "any" else is_unique(col)
+        field["constraints"] = {"unique": unique}
         if (example := get_example(col)) is not None:
             field["example"] = example
         if field["name"] in enums:
@@ -157,8 +189,13 @@ def update_table_schema(
         # convert it to a string to avoid a TypeError
         if any(isinstance(x, (list, tuple, np.ndarray)) for x in col):
             return False
+        # test for blanks before stringifying: str() renders a missing value as
+        # "nan", which is not null, and an enum holding a nan can never be
+        # satisfied because a nan does not equal itself.
+        if col.isnull().any():
+            return False
         str_col = col.apply(str)
-        return str_col.nunique() < 15 and not str_col.isnull().any()
+        return str_col.nunique() < 15
 
     cols = df.apply(safe_unique)
     low_count_cols = df.columns.to_series()[cols].to_list()

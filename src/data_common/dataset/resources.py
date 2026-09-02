@@ -181,9 +181,17 @@ class DataResource:
         """
         return update_table_schema(self.path, existing_schema)
 
-    def rebuild_yaml(self, is_geodata: bool = False) -> None:
+    def rebuild_yaml(
+        self,
+        is_geodata: bool = False,
+        *,
+        force_schema: bool = False,
+    ) -> None:
         """
         Rebuild resource YAML while preserving existing custom values.
+
+        An unchanged file keeps its stored schema unless force_schema asks
+        for the schema to be derived from the data again.
         """
         existing_description = self.get_resource()
         current_hash = hashlib.md5(
@@ -192,7 +200,8 @@ class DataResource:
         ).hexdigest()
         description = existing_description or describe(self.path).to_dict()
         existing_schema = existing_description.get("schema")
-        if existing_description.get("hash") == current_hash and existing_schema:
+        unchanged = existing_description.get("hash") == current_hash
+        if unchanged and existing_schema and not force_schema:
             description["schema"] = existing_schema
         else:
             description["schema"] = self.get_schema_from_file(existing_schema)
@@ -237,6 +246,9 @@ class DataResource:
             r'example: "\1"',
             yaml_text,
         )
+        # wrapping a long value leaves a space before the line break, which
+        # every consumer of the file then has to carry as trailing whitespace
+        yaml_text = "".join(f"{line.rstrip()}\n" for line in yaml_text.splitlines())
 
         self.resource_path.write_text(yaml_text)
         print(f"Updated config for {self.slug} to {self.resource_path}")

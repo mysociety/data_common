@@ -234,7 +234,7 @@ def update_schema(slug: str = "", all: bool = False) -> None:
     packages = get_relevant_packages(slug, all)
     for p in packages:
         rich.print(f"[blue]Building resources for {p.slug}[/blue]")
-        p.rebuild_all_resources()
+        p.rebuild_all_resources(force_schema=True)
 
 
 @cli.command()
