@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypedDict
@@ -164,11 +165,28 @@ class Schema:
         descriptions = descriptions or {}
         enums = enums or {}
         data: SchemaValidator = build_table_schema(df, index=False, version=False)  # type: ignore
+        for field in data["fields"]:
+            col = df[field["name"]]
+            if field["type"] == "string" and cls.is_date_column(col):
+                field["type"] = "date"
         data["fields"] = [
             cls.enhance_field(df, field, descriptions, enums)
             for field in data["fields"]
         ]
         return data
+
+    @staticmethod
+    def is_date_column(series: pd.Series) -> bool:
+        """
+        Returns True if a string-typed Series actually contains datetime.date
+        objects (as happens when pandas reads a date32 parquet column with nulls).
+        """
+        non_null = series.dropna()
+        if len(non_null) == 0:
+            return False
+        return isinstance(non_null.iloc[0], datetime.date) and not isinstance(
+            non_null.iloc[0], datetime.datetime
+        )
 
 
 def update_table_schema(
