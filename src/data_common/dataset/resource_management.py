@@ -1000,7 +1000,10 @@ class DataPackage:
             df.to_excel(writer, sheet_name=short_sheet_name, index=False)
 
             for column in df:
-                column_length = max(df[column].astype(str).map(len).max(), len(column))  # type: ignore
+                column_length = max(
+                    len(str(column)),
+                    df[column].astype(str).str.len().fillna(0).max(),
+                )
                 column_length += 4
 
                 col_idx = df.columns.get_loc(column)

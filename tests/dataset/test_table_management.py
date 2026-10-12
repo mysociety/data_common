@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -146,3 +148,25 @@ def test_all_null_object_column_stays_a_string(tmp_path: Path) -> None:
     schema = update_table_schema(path, None)
 
     assert field_types(schema)["empty"] == "string"
+
+
+def test_date_enums_can_be_published_as_json(tmp_path: Path) -> None:
+    """
+    Publish inferred date enums as ISO strings that validate native dates.
+    """
+    path = tmp_path / "dates.parquet"
+    pd.DataFrame({"updated": [date(2026, 9, 1), date(2026, 9, 2)]}).to_parquet(
+        path, index=False
+    )
+    schema = update_table_schema(
+        path, {"fields": [{"name": "updated", "description": "Update date"}]}
+    )
+    field = schema["fields"][0]
+
+    assert field["type"] == "date"
+    assert field["constraints"]["enum"] == ["2026-09-01", "2026-09-02"]
+    resource_path = tmp_path / "dates.resource.json"
+    resource_path.write_text(
+        json.dumps({"name": "dates", "path": path.name, "schema": schema})
+    )
+    assert validate(resource_path).valid

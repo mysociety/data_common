@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pandas as pd
+import pytest
+from openpyxl import load_workbook
 from ruamel.yaml import YAML
 
 from data_common.dataset.resource_management import (
@@ -108,3 +111,45 @@ def test_changed_row_count_remains_a_minor_change(
         "MINOR",
         "Change in data for resource(s): people",
     )
+
+
+@pytest.mark.parametrize("names", [["A longer display name", None], [None, None], []])
+def test_excel_column_widths_handle_missing_and_empty_values(
+    model_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    names: list[str | None],
+) -> None:
+    """
+    Build readable Excel sheets with missing string cells or no data rows.
+    """
+    configuration = model_repository / "pyproject.toml"
+    configuration.write_text(
+        configuration.read_text().replace(
+            "[tool.dataset]\n",
+            '[tool.dataset]\ncredit_url = "https://example.test/survey"\n',
+        )
+    )
+    monkeypatch.chdir(model_repository)
+    package = DataPackage(model_repository / "data" / "packages" / "people")
+    pd.DataFrame(
+        {
+            "id": list(range(1, len(names) + 1)),
+            "name": pd.Series(names, dtype="str"),
+            "active": [True] * len(names),
+        }
+    ).to_csv(package.path / "people.csv", index=False)
+    package.rebuild_all_resources()
+
+    package.build_excel()
+
+    workbook = load_workbook(package.build_path() / "people.xlsx")
+    try:
+        sheet = workbook["people"]
+        assert sheet["B1"].value == "name"
+        assert sheet.max_row == len(names) + 1
+        expected_width = max([len("name"), *(len(name) for name in names if name)]) + 4
+        assert sheet.column_dimensions["B"].width >= expected_width
+        for row, name in enumerate(names, start=2):
+            assert sheet.cell(row=row, column=2).value == name
+    finally:
+        workbook.close()

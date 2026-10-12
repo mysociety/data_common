@@ -142,7 +142,7 @@ class Schema:
                 field["constraints"]["enum"] = [
                     x for x in field["constraints"]["enum"] if x is not None
                 ]
-                if field["type"] == "string":
+                if field["type"] in {"string", "date"}:
                     field["constraints"]["enum"] = [
                         str(x) for x in field["constraints"]["enum"]
                     ]
