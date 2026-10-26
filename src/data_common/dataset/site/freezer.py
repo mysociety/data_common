@@ -4,11 +4,12 @@ import shutil
 from html.parser import HTMLParser
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 from flask import Flask
 
 from .catalogue import SiteCatalogue
+from .extensions import SiteExtension
 from .models import BuildReport, BuildTarget, DataIndex, MissingLink
 from .settings import SiteSettings, get_site_settings
 
@@ -16,6 +17,7 @@ from .settings import SiteSettings, get_site_settings
 def build_targets(
     catalogue: SiteCatalogue,
     settings: SiteSettings,
+    extensions: list[SiteExtension] | None = None,
 ) -> list[BuildTarget]:
     """
     Return every application route and its static output destination.
@@ -69,7 +71,57 @@ def build_targets(
             "application/json",
         )
     )
+    for extension in extensions or []:
+        targets.extend(extension.targets)
+    reserved_directories = [
+        Path("assets"),
+        Path("data"),
+        *(
+            Path("analysis", page.slug, "notebook_resources")
+            for page in catalogue.analyses.values()
+        ),
+    ]
+    validate_build_targets(targets, settings, reserved_directories)
     return sorted(targets, key=lambda target: str(target.destination))
+
+
+def validate_build_targets(
+    targets: list[BuildTarget],
+    settings: SiteSettings,
+    reserved_directories: list[Path],
+) -> None:
+    """
+    Check output paths before cleaning, including copied trees and marker files.
+
+    Copied directories belong wholly to the core builder, including empty trees.
+    Targets cannot write inside them or replace one of their parent directories.
+    """
+    destinations = {Path(".nojekyll")}
+    urls: set[str] = set()
+    for target in targets:
+        path = target.destination
+        if path.is_absolute() or ".." in path.parts or not path.parts:
+            raise ValueError(f"Unsafe static destination: {path}")
+        if path in destinations or target.url in urls:
+            raise ValueError(f"Duplicate static target: {target.url} -> {path}")
+        if any(
+            path == directory or directory in path.parents or path in directory.parents
+            for directory in reserved_directories
+        ):
+            raise ValueError(f"Reserved static destination: {path}")
+        if (
+            not target.url.startswith(settings.site_path())
+            or "?" in target.url
+            or "#" in target.url
+        ):
+            raise ValueError(
+                f"Static target must be a path below the site base: {target.url}"
+            )
+        destinations.add(path)
+        urls.add(target.url)
+    for path in destinations:
+        if any(parent in destinations for parent in path.parents):
+            raise ValueError(f"Static file/directory collision: {path}")
 
 
 def clean_output(output_dir: Path, settings: SiteSettings) -> None:
@@ -112,17 +164,21 @@ def build_site(
     settings: SiteSettings = app.config["SITE_SETTINGS"]
     catalogue: SiteCatalogue = app.extensions["dataset_catalogue"]
     output = (output_dir or settings.output_dir).resolve()
+    targets = build_targets(
+        catalogue,
+        settings,
+        app.extensions.get("dataset_site_extensions", []),
+    )
     clean_output(output, settings)
 
     client = app.test_client()
-    targets = build_targets(catalogue, settings)
     for target in targets:
         response = client.get(target.url)
         if response.status_code != 200:
             raise ValueError(
                 f"Could not render {target.url}: HTTP {response.status_code}"
             )
-        if not response.content_type.startswith(target.mimetype):
+        if target.mimetype is not None and response.mimetype != target.mimetype:
             raise ValueError(
                 f"Unexpected content type for {target.url}: {response.content_type}"
             )
@@ -195,7 +251,7 @@ def link_destination(
     parsed = urlsplit(link)
     if parsed.scheme or parsed.netloc or not parsed.path:
         return None
-    path = parsed.path
+    path = unquote(parsed.path)
     base = settings.base_url.rstrip("/")
     rooted = path.startswith("/")
     if rooted and base:

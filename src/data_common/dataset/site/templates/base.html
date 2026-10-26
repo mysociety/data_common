@@ -27,11 +27,11 @@
   <header class="site-header">
     <div class="container">
       <h1><a href="{{ site_path() }}">{{ site_settings.title }}</a></h1>
-      {% if site_settings.navigation %}
+      {% if site_navigation %}
         <div class="nav-position">
           <nav class="site-nav" aria-label="Main navigation">
             <ul>
-              {% for item in site_settings.navigation %}
+              {% for item in site_navigation %}
                 <li><a href="{{ item.url }}">{{ item.title }}</a></li>
               {% endfor %}
             </ul>

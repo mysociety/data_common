@@ -18,6 +18,17 @@
     </ul>
   {% endif %}
 
+  {% if tools %}
+    <h2 id="tools-heading">Tools</h2>
+    <ul class="item-list" aria-labelledby="tools-heading">
+      {% for tool in tools %}
+        <li>
+          <p><a href="{{ tool.url }}">{{ tool.title }}</a></p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
   {% if analyses %}
     <h2>Analysis</h2>
     <ul class="item-list">

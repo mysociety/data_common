@@ -8,6 +8,7 @@ from markdown_it import MarkdownIt
 from markupsafe import Markup
 
 from .catalogue import SiteCatalogue
+from .extensions import register_extensions
 from .settings import SiteSettings, get_site_settings
 from .views import site
 
@@ -69,10 +70,12 @@ def create_app(
         """
         return {
             "site_settings": site_settings,
+            "site_navigation": app.extensions["dataset_navigation"],
             "site_path": site_settings.site_path,
         }
 
     app.register_blueprint(site, url_prefix=site_settings.base_url)
+    register_extensions(app, site_settings)
     return app
 
 

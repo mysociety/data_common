@@ -15,6 +15,7 @@ from flask import (
 )
 
 from .catalogue import SiteCatalogue
+from .extensions import SiteExtension
 from .models import DownloadPage
 from .settings import SiteSettings
 
@@ -35,10 +36,12 @@ def index() -> str:
     Render the site landing page.
     """
     catalogue = _catalogue()
+    extensions: list[SiteExtension] = current_app.extensions["dataset_site_extensions"]
     return render_template(
         "index.html",
         datasets=catalogue.latest_datasets(),
         analyses=catalogue.analysis_pages(),
+        tools=[item for extension in extensions for item in extension.navigation],
     )
 
 

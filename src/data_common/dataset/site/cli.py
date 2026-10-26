@@ -52,6 +52,7 @@ def routes_command(as_json: bool) -> None:
     targets = build_targets(
         app.extensions["dataset_catalogue"],
         app.config["SITE_SETTINGS"],
+        app.extensions.get("dataset_site_extensions", []),
     )
     if as_json:
         click.echo(

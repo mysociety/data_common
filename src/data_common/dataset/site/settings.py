@@ -67,6 +67,7 @@ class SiteSettings(BaseModel):
     credit_url: str = ""
     accent_colour: str = "#4faded"
     navigation: tuple[NavigationItem, ...] = ()
+    extensions: tuple[str, ...] = ()
     downloads: DownloadSettings = Field(default_factory=DownloadSettings)
     analysis: AnalysisSettings = Field(default_factory=AnalysisSettings)
 
@@ -116,6 +117,7 @@ class SiteConfiguration(BaseModel):
     output_dir: Path = Path("_site")
     accent_colour: str = "#4faded"
     navigation: list[NavigationItem] = Field(default_factory=list)
+    extensions: list[str] = Field(default_factory=list)
     downloads: DownloadSettings = Field(default_factory=DownloadSettings)
     analysis: AnalysisConfiguration = Field(default_factory=AnalysisConfiguration)
 
@@ -211,6 +213,7 @@ def get_site_settings(
         credit_url=dataset.credit_url,
         accent_colour=site.accent_colour,
         navigation=tuple(site.navigation),
+        extensions=tuple(site.extensions),
         downloads=site.downloads,
         analysis=AnalysisSettings(
             enabled=site.analysis.enabled,

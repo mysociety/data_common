@@ -11,6 +11,7 @@ from click.shell_completion import CompletionItem
 from rich.traceback import install
 
 from .site.cli import site_cli
+from .site.scaffold import create_extension_command
 
 if TYPE_CHECKING:
     from .resource_management import DataPackage
@@ -333,6 +334,7 @@ def auto_complete() -> None:
 
 
 cli.add_command(site_cli)
+cli.add_command(create_extension_command)
 
 
 def run() -> None:

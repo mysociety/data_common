@@ -20,12 +20,12 @@ class VersionLabels(NamedTuple):
 
 class BuildTarget(NamedTuple):
     """
-    Describe one route and its static output destination.
+    Describe a route and output path; None skips response MIME validation.
     """
 
     url: str
     destination: Path
-    mimetype: str = "text/html"
+    mimetype: str | None = "text/html"
 
 
 class BuildReport(NamedTuple):
