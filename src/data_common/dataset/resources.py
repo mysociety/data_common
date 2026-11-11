@@ -143,7 +143,11 @@ class DataResource:
             dataframe = self.get_df()
             if is_geodata and "geometry" in dataframe.columns:
                 dataframe = dataframe.drop(columns=["geometry"])
-            resource["data"] = dataframe.fillna(value="").to_dict(orient="records")
+            resource["data"] = (
+                dataframe.astype(object)
+                .where(dataframe.notna(), "")
+                .to_dict(orient="records")
+            )
             resource["format"] = "json"
             resource.pop("scheme", None)
             resource.pop("path", None)

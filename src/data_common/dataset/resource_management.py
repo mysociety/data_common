@@ -9,6 +9,7 @@ import subprocess
 import warnings
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from datetime import date, datetime
 from pathlib import Path
 from shutil import copyfile
 from typing import Any, Literal, NamedTuple, TypeVar
@@ -1133,7 +1134,9 @@ class DataPackage:
                 else:
                     raise ValueError(f"Unrecognised modify type {modify_type}")
 
-        def custom_converter(value: object) -> list[Any] | None:
+        def custom_converter(value: object) -> str | list[Any] | None:
+            if isinstance(value, (date, datetime)):
+                return value.isoformat()
             if isinstance(value, np.ndarray):
                 return list(value)
             return None

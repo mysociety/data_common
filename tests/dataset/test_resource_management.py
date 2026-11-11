@@ -153,3 +153,71 @@ def test_excel_column_widths_handle_missing_and_empty_values(
             assert sheet.cell(row=row, column=2).value == name
     finally:
         workbook.close()
+
+
+def test_composite_json_supports_nullable_numeric_and_boolean_columns(
+    model_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Export nullable extension values without inserting strings into typed arrays.
+    """
+    import json
+
+    monkeypatch.chdir(model_repository)
+    package = DataPackage(model_repository / "data/packages/people")
+    pd.DataFrame(
+        {
+            "term": pd.Series([7, None, 0], dtype="Int64"),
+            "active": pd.Series([True, None, False], dtype="boolean"),
+            "amount": pd.Series([1.25, None, 0.0], dtype="Float64"),
+            "name": pd.Series(["Senedd", None, ""], dtype="string"),
+        }
+    ).to_parquet(package.path / "nullable.parquet", index=False)
+    package.rebuild_all_resources()
+
+    package.build_composite_json()
+
+    output = json.loads((package.build_path() / "people.json").read_text())
+    resource = next(item for item in output["resources"] if item["name"] == "nullable")
+    assert resource["data"] == [
+        {"term": 7, "active": True, "amount": 1.25, "name": "Senedd"},
+        {"term": "", "active": "", "amount": "", "name": ""},
+        {"term": 0, "active": False, "amount": 0.0, "name": ""},
+    ]
+    assert type(resource["data"][0]["term"]) is int
+    assert type(resource["data"][0]["active"]) is bool
+
+
+def test_composite_json_preserves_dates_and_timestamps(
+    model_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Date bounds must reach JSON consumers instead of silently becoming null.
+    """
+    import json
+    from datetime import date, datetime, timezone
+
+    monkeypatch.chdir(model_repository)
+    package = DataPackage(model_repository / "data/packages/people")
+    pd.DataFrame(
+        {
+            "valid_until": [date(2026, 4, 8), None],
+            "captured_at": [datetime(2026, 11, 11, 6, 17, tzinfo=timezone.utc), None],
+        }
+    ).to_parquet(package.path / "dates.parquet", index=False)
+    (package.path / "dates.resource.yaml").write_text(
+        "name: dates\npath: dates.parquet\nformat: parquet\n"
+        "schema:\n  fields:\n  - name: valid_until\n    type: date\n"
+        "  - name: captured_at\n    type: datetime\n"
+    )
+
+    package.build_composite_json()
+
+    output = json.loads((package.build_path() / "people.json").read_text())
+    resource = next(item for item in output["resources"] if item["name"] == "dates")
+    assert resource["data"] == [
+        {"valid_until": "2026-04-08", "captured_at": "2026-11-11T06:17:00+00:00"},
+        {"valid_until": "", "captured_at": ""},
+    ]
